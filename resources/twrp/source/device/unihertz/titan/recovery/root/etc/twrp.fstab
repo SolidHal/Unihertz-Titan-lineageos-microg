@@ -1,0 +1,16 @@
+/system_root    ext4    /dev/block/platform/bootdevice/by-name/system    flags=display="System"
+/vendor         ext4    /dev/block/platform/bootdevice/by-name/vendor    flags=backup=1
+/data           ext4    /dev/block/platform/bootdevice/by-name/userdata  flags=dm_use_original_path;encryptable=/dev/block/platform/bootdevice/by-name/metadata
+/cache          ext4    /dev/block/platform/bootdevice/by-name/cache
+/boot           emmc    /dev/block/platform/bootdevice/by-name/boot      flags=backup=1
+/recovery       emmc    /dev/block/platform/bootdevice/by-name/recovery  flags=backup=1
+/metadata       emmc    /dev/block/platform/bootdevice/by-name/metadata  flags=display="Metadata";backup=1
+/external_sd	auto	/dev/block/mmcblk1p1 /dev/block/mmcblk1	         flags=display="MicroSD";storage;wipeingui;removable;backup=0;adopted_mount_delay=5
+/usb-otg        vfat    /dev/block/sda1 /dev/block/sda                   flags=display="USB OTG";storage;wipeingui;removable
+/protect_f ext4 /dev/block/platform/bootdevice/by-name/protect1 flags=display="Protect_f";backup=1
+/protect_s ext4 /dev/block/platform/bootdevice/by-name/protect2 flags=display="Protect_s";subpartitionof=/protect_f;backup=1
+/nvdata    ext4 /dev/block/platform/bootdevice/by-name/nvdata flags=display="Nvdata";backup=1
+/nvcfg     ext4 /dev/block/platform/bootdevice/by-name/nvcfg  flags=display="Nvcfg";backup=1
+/nvram     emmc /dev/block/platform/bootdevice/by-name/nvram  flags=display="Nvram";backup=1
+/proinfo   emmc /dev/block/platform/bootdevice/by-name/proinfo flags=display="Proinfo";backup=1
+/seccfg    emmc /dev/block/platform/bootdevice/by-name/seccfg  flags=display="Seccfg";backup=1
