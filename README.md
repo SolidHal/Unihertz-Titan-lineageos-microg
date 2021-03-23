@@ -116,14 +116,9 @@ https://github.com/SolidHal/android_prebuilts_solidhal
 - TODO: build into rom?
 
 
-## TODO
- - add function to rom, or create magisk module to map button for switching between trackpad/navigation setting
  - get reasonable keyboard setup
    - bind alt so we can use numbers
    - double tap alt for ctrl? get esc?
-
-### TODO: switch between mouse and navigation mode for trackpad quickly?
-- need to do something like uinput titan and the rc removed here? https://github.com/phhusson/unihertz_titan/commit/eb577320b53dd7c838b309ece848146075b451a8
 
 
 
@@ -147,6 +142,10 @@ hide the software keyboard when using the hardware keyboard:
 ```
 adb shell settings put secure show_ime_with_hard_keyboard 1
 ```
+
+TODO: 
+- binding for alt/ctrl/esc
+- add alt+shift functions for keys in the keychar file to get more symbols
 
 ### Touchpad configuration
 
@@ -186,7 +185,7 @@ Double tap on the space key inputs a tab.
 
 
 
-### keyboard 
+### software keyboard 
 
 ruKeyboard or anysoft
 
