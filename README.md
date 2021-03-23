@@ -130,9 +130,9 @@ https://github.com/SolidHal/android_prebuilts_solidhal
 ### aptX bluetooth
 aptX won't work on this device without installing the magisk modules located in the `resources/bluetooth` directory
 
-### keyboard/touchpad files
+### keyboard configuration files
 
-these map the keyboard properly. Keyboard touchpad functionality is a bit trickier.
+These map the keyboard properly, and remove the annoying cursor. Keyboard touchpad functionality is a bit trickier and is expanded on in a later section.
 
 ```
 adb root
@@ -151,15 +151,41 @@ hide the software keyboard when using the hardware keyboard:
 adb shell settings put secure show_ime_with_hard_keyboard 1
 ```
 
-### touchpad configuration
+### Touchpad configuration
 
 since none of the suggested .idc modifications worked properly, I resurrected uinput-titan from https://github.com/phhusson/unihertz_titan
 
 #### optional: build uinput-titan
 I have included a prebuilt binary, but if it doesn't work for some reason heres how to build it.
+get the android ndk from here: https://developer.android.com/ndk/downloads and extract it to ~/android-ndk
+```
+cd resources/uinput-titan
+make
 ```
 
+#### Install
+
 ```
+adb root
+adb remount
+adb shell mount -o remount,rw /
+adb push resources/uinput-titan/uinput-titan /system/bin/uinput-titan
+adb push resources/uinput-titan/titan.rc /system/etc/init/
+```
+
+#### Functionalities
+
+Swipe left is left arrow key
+Swipe right is right arrow key
+
+On left 1/3rd of keyboard:
+- swipe down reveals the notification panel
+- swipe up closes it
+
+Right 2/3rds of keyboard are used for scrolling.
+
+Double tap on the space key inputs a tab.
+
 
 
 ### keyboard 
