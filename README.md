@@ -47,6 +47,8 @@ adb reboot bootloader
 fastboot flashing unlock
 ```
 
+press volume up to accept
+
 6) Now wipe the device
 ```
 fastboot erase system
