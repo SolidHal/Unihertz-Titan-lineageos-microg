@@ -34,3 +34,19 @@ keyboard.builtIn = 1
 
 cursor.mode = navigation
 cursor.orientationAware = 1
+
+
+
+#mtk-tpd:
+# - the main touchscreen
+# - 1440x1440 resolution
+
+#mtk-pad
+# - 1440x720
+# - probably the touch device on the keyboard?
+
+#mtk-kpd
+
+
+## magisk module?
+# treak mtk-pad as a touchScreen, but remove tap events?

@@ -126,21 +126,41 @@ https://github.com/SolidHal/android_prebuilts_solidhal
 - need to do something like uinput titan and the rc removed here? https://github.com/phhusson/unihertz_titan/commit/eb577320b53dd7c838b309ece848146075b451a8
 
 
-### Do some settings:
+
+### aptX bluetooth
+aptX won't work on this device without installing the magisk modules located in the `resources/bluetooth` directory
+
+### keyboard/touchpad files
+
+these map the keyboard properly. Keyboard touchpad functionality is a bit trickier.
+
 ```
 adb root
 adb remount
 adb shell mount -o remount,rw /
-adb push resources/mtk-pad.idc /system/usr/idc/mtk-pad.idc
-adb shell setprop persist.sys.phh.mainkeys 1
-adb shell settings put secure show_ime_with_hard_keyboard 1
-adb reboot
+adb push resources/keyboard/Android10/system_usr_idc/* /system/usr/idc/
+adb push resources/keyboard/Android10/system_usr_keychars/* /system/usr/keychars/
+adb push resources/keyboard/Android10/system_usr_keylayout/* /system/usr/keylayout/
+
+adb push resources/uinput-titan/uinput-titan /system/bin/uinput-titan
+adb push resources/uinput-titan/titan.rc /system/etc/init/
 ```
 
-/system/usr/idc/
+hide the software keyboard when using the hardware keyboard:
+```
+adb shell settings put secure show_ime_with_hard_keyboard 1
+```
 
-### aptX bluetooth
-aptX won't work on this device without installing the magisk modules located in the `resources/bluetooth` directory
+### touchpad configuration
+
+since none of the suggested .idc modifications worked properly, I resurrected uinput-titan from https://github.com/phhusson/unihertz_titan
+
+#### optional: build uinput-titan
+I have included a prebuilt binary, but if it doesn't work for some reason heres how to build it.
+```
+
+```
+
 
 ### keyboard 
 
