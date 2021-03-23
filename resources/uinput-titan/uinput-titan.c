@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -89,7 +89,8 @@ static int open_ev(const char *lookupName) {
 static int original_input_init() {
     int fd = open_ev("mtk-pad");
     if(fd<0) return fd;
-    ioctl(fd, EVIOCGRAB, 1);
+    // let the mtk-pad driver also take control
+    /* ioctl(fd, EVIOCGRAB, 1); */
     return fd;
 }
 
@@ -190,7 +191,7 @@ static void decide(int ufd, int touched, int x, int y) {
     if(wasTouched && !touched && nEventsInSwipe == 0) {
         int64_t duration = now() - startT;
         int64_t timeSinceLastSingleTap = now() - lastSingleTapT;
-        printf("single tap %d, %d, %d, %d; %lld %lld\n", x, y, y - oldY, x - oldX, duration, timeSinceLastSingleTap);
+        printf("single tap %d, %d, %d, %d %" PRId64 " %" PRId64 "\n", x, y, y - oldY, x - oldX, duration, timeSinceLastSingleTap);
 
         if(duration < 120*1000LL && timeSinceLastSingleTap < 500*1000LL && d > 1000*1000LL) {
             printf("Got double tap\n");
