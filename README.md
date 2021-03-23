@@ -141,9 +141,6 @@ adb shell mount -o remount,rw /
 adb push resources/keyboard/Android10/system_usr_idc/* /system/usr/idc/
 adb push resources/keyboard/Android10/system_usr_keychars/* /system/usr/keychars/
 adb push resources/keyboard/Android10/system_usr_keylayout/* /system/usr/keylayout/
-
-adb push resources/uinput-titan/uinput-titan /system/bin/uinput-titan
-adb push resources/uinput-titan/titan.rc /system/etc/init/
 ```
 
 hide the software keyboard when using the hardware keyboard:
@@ -171,6 +168,7 @@ adb remount
 adb shell mount -o remount,rw /
 adb push resources/uinput-titan/uinput-titan /system/bin/uinput-titan
 adb push resources/uinput-titan/titan.rc /system/etc/init/
+adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
 ```
 
 #### Functionalities
@@ -274,3 +272,6 @@ adb sideload <android-10-ota.zip>
 # Thanks to:
 @ValdikSS - owner of https://unihertz-titan.neocities.org, patched boot.img for magisk, and twrp builds
           - much of this information comes from them, and I am just organizing it here
+          
+@phhusson - for the great base android GSI images
+          - for the core of uinput-titan

@@ -42,7 +42,7 @@ static int uinput_init() {
             .product = 0xbeaf,
             .version = 3,
         },
-        .name = "titan uinput",
+        .name = "titan-uinput",
         .ff_effects_max = 0,
     };
     write(fd, &setup, sizeof(setup));
@@ -59,7 +59,7 @@ static int uinput_init() {
     ioctl(fd, UI_SET_KEYBIT, KEY_LEFT);
     ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT);
     ioctl(fd, UI_SET_KEYBIT, KEY_TAB);
-    ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_POINTER);
+    ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_DIRECT);
 
     const char phys[] = "this/is/a/virtual/device/for/scrolling";
     ioctl(fd, UI_SET_PHYS, phys);
@@ -89,8 +89,7 @@ static int open_ev(const char *lookupName) {
 static int original_input_init() {
     int fd = open_ev("mtk-pad");
     if(fd<0) return fd;
-    // let the mtk-pad driver also take control
-    /* ioctl(fd, EVIOCGRAB, 1); */
+    ioctl(fd, EVIOCGRAB, 1);
     return fd;
 }
 
