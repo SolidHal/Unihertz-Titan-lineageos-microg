@@ -116,16 +116,10 @@ https://github.com/SolidHal/android_prebuilts_solidhal
 - TODO: build into rom?
 
 
- - get reasonable keyboard setup
-   - bind alt so we can use numbers
-   - double tap alt for ctrl? get esc?
-
-
-
 ### aptX bluetooth
 aptX won't work on this device without installing the magisk modules located in the `resources/bluetooth` directory
 
-### keyboard configuration files
+### Keyboard configuration
 
 These map the keyboard properly, and remove the annoying cursor. Keyboard touchpad functionality is a bit trickier and is expanded on in a later section.
 
@@ -145,7 +139,6 @@ adb shell settings put secure show_ime_with_hard_keyboard 1
 
 TODO: 
 - binding for alt/ctrl/esc
-- add alt+shift functions for keys in the keychar file to get more symbols
 
 ### Touchpad configuration
 
