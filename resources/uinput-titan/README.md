@@ -150,3 +150,90 @@ struct input_absinfo {
         __s32 resolution;
 };
 ```
+
+
+
+
+static int wasTouched, oldX, oldY, nEventsInSwipe;
+static int64_t startT, lastSingleTapT;
+static int lastSingleTapX, lastSingleTapY, lastSingleTapDuration;
+//touchpanel resolution is 1440x720
+static void decide(int ufd, int touched, int x, int y) {
+    uint64_t d = now() - lastKbdTimestamp;
+
+    if(wasTouched && !touched && nEventsInSwipe == 0) {
+        int64_t duration = now() - startT;
+        int64_t timeSinceLastSingleTap = now() - lastSingleTapT;
+        LOGI("single tap %d, %d, %d, %d %" PRId64 " %" PRId64 "\n", x, y, y - oldY, x - oldX, duration, timeSinceLastSingleTap);
+
+        if(duration < 120*1000LL && timeSinceLastSingleTap < 500*1000LL && d > 1000*1000LL) {
+            LOGI("Got double tap\n");
+            if(isInRect(oldX, oldY, 570, 721, 600, 900)) {
+                LOGI("Double tap on space key\n");
+                injectKey(ufd, KEY_TAB);
+            }
+        }
+
+        lastSingleTapX = oldX;
+        lastSingleTapY = oldY;
+        lastSingleTapT = startT;
+        lastSingleTapDuration = duration;
+    }
+    if(!touched) {
+        wasTouched = 0;
+        return;
+    }
+    if(!wasTouched && touched) {
+        oldX = x;
+        oldY = y;
+        startT = now();
+        wasTouched = touched;
+        nEventsInSwipe = 0;
+        return;
+    }
+
+    //500ms after typing ignore
+    if(d < 500*1000) {
+        oldX = x;
+        oldY = y;
+        return;
+    }
+
+    nEventsInSwipe++;
+    printf("%d, %d, %d, %d, %d\n", touched, x, y, y - oldY, x - oldX);
+    //2/3 width right side is used for scrolling
+    if(x > 300) {
+        if( abs(y - oldY) > 60) {
+            injectSwipe(ufd, oldX, oldY, x, y);
+            oldY = y;
+            oldX = x;
+            return;
+        }
+    } else {
+        //1/3 left side is used to trigger notifications
+        if( (y - oldY) > 280) {
+            system("cmd statusbar expand-notifications");
+            oldY = y;
+            oldX = x;
+            return;
+        }
+        if( (y - oldY) < -280) {
+            system("cmd statusbar collapse");
+            oldY = y;
+            oldX = x;
+            return;
+        }
+    }
+    if( (x - oldX) < -180) {
+        injectKey(ufd, KEY_LEFT);
+        oldY = y;
+        oldX = x;
+        return;
+    }
+    if( (x - oldX) > 180) {
+        injectKey(ufd, KEY_RIGHT);
+        oldY = y;
+        oldX = x;
+        return;
+    }
+}

@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <android/log.h>
 
 #define  LOG_TAG    "UINPUT-TITAN"
@@ -29,15 +30,16 @@ uint64_t now() {
 
 static uint64_t lastKbdTimestamp;
 
-struct input_event e;
+
 
 static void insertEvent(int fd, int type, int code, int value) {
-    memset(&e, 0, sizeof(e));
-    gettimeofday(&e.time, NULL);
-    e.type = type;
-    e.code = code;
-    e.value = value;
-    write(fd, &e, sizeof(e));
+    struct input_event out_e;
+    memset(&out_e, 0, sizeof(out_e));
+    gettimeofday(&out_e.time, NULL);
+    out_e.type = type;
+    out_e.code = code;
+    out_e.value = value;
+    write(fd, &out_e, sizeof(out_e));
 }
 
 static int uinput_init() {
@@ -313,7 +315,7 @@ int injectKey(int ufd, int key) {
     return 0;
 }
 
-int injectAbsEvent(int ufd, int x, int y, bool first, bool last){
+int injectAbsEvent(int ufd, int x, int y, bool first){
     insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
     if(first){
         insertEvent(ufd, EV_KEY, BTN_TOUCH, 1 );
@@ -324,12 +326,15 @@ int injectAbsEvent(int ufd, int x, int y, bool first, bool last){
     insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MINOR, 1 );
     insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
     insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-    if(last){
-        insertEvent(ufd, EV_KEY, BTN_TOUCH, 0 );
-        insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, -1 );
-        insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-        insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-    }
+    return 0;
+}
+
+int injectAbsFinal(ufd){
+    insertEvent(ufd, EV_KEY, BTN_TOUCH, 0 );
+    insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, -1 );
+    insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
+    insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
+    return 0;
 }
 
 // 0x0             X axis
@@ -352,14 +357,13 @@ int injectAbsEvent(int ufd, int x, int y, bool first, bool last){
 // using system input swipe is much much too slow :/
 // currently, this is only used for vertical swipes, but it has the capabilities to be used for horizontal swipes as well
 int injectSwipe(int ufd, int xstart, int ystart, int xend, int yend){
-    // map from 720 to 1440
-    ystart = 2*ystart;
-    yend = 2*yend;
 
-    // determine if it is a vertical or horizontal swipe
-
+    int x = 720;
+    int y = 720;
+    int swipe_size = 60;
+    int swipe_increment = 20;
     bool vertical = false;
-    bool positive = false
+    bool positive = false; // positive is down, !positive is up
     if ( abs(xstart - xend ) > abs(ystart - yend)){
         vertical = false;
         if( ( xstart - xend ) > 0){
@@ -371,175 +375,207 @@ int injectSwipe(int ufd, int xstart, int ystart, int xend, int yend){
     }
     else{
         vertical = true;
+        if( ( ystart - yend ) > 0){
+            positive = true;
+        }
+        else{
+            positive = false;
+        }
     }
 
     LOGI("SENDING SWIPE\n");
-    insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
-    insertEvent(ufd, EV_KEY, BTN_TOUCH, 1 );
-    insertEvent(ufd, EV_ABS, ABS_MT_POSITION_X, xstart );
-    insertEvent(ufd, EV_ABS, ABS_MT_POSITION_Y, ystart );
-    insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MAJOR, 1 );
-    insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MINOR, 1 );
-    insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-    insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-
-    if(ystart < yend && xstart < xend){
-        for(int i = xstart+1; i <= xend; i += 10){
-            for(int j = ystart+1; j <= yend; j += 10){
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_X, i );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_Y, j );
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MAJOR, 1 );
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MINOR, 1 );
-
-                insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-                insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-            }
+    injectAbsEvent(ufd, x, y, true);
+    if(vertical && positive){
+        for(int j = y+swipe_increment; j <= y+swipe_size; j += swipe_increment){
+            injectAbsEvent(ufd, x, j, false);
+            usleep(500);
         }
     }
-    else if(ystart < yend && xstart > xend){
-        for(int i = xstart-1; i >= xend; i -= 2){
-            for(int j = ystart+1; j <= yend; j += 2){
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_X, i );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_Y, j );
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MAJOR, 1 );
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MINOR, 1 );
-
-                insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-                insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-            }
+    if(vertical && !positive){
+        for(int j = y-swipe_increment; j >= y-swipe_size; j -= swipe_increment){
+            injectAbsEvent(ufd, x, j, false);
+            usleep(500);
         }
     }
-    else if(ystart > yend && xstart > xend){
-        for(int i = xstart-1; i >= xend; i -= 2){
-            for(int j = ystart-1; j >= yend; j -= 2){
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_X, i );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_Y, j );
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MAJOR, 1 );
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MINOR, 1 );
-
-                insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-                insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-            }
-        }
-    }
-    else if(ystart > yend && xstart < xend){
-        for(int i = xstart+1; i <= xend; i += 2){
-            for(int j = ystart-1; j >= yend; j -= 2){
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_X, i );
-                insertEvent(ufd, EV_ABS, ABS_MT_POSITION_Y, j );
-
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MAJOR, 1 );
-                insertEvent(ufd, EV_ABS, ABS_MT_TOUCH_MINOR, 1 );
-
-                insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-                insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
-            }
+    if(!vertical && positive){
+        for(int i = x+swipe_increment; i >= x+swipe_size; i += swipe_increment){
+            injectAbsEvent(ufd, i, y, false);
+            usleep(500);
         }
     }
 
-    insertEvent(ufd, EV_KEY, BTN_TOUCH, 0 );
-    insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, (int)-1 );
-    insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
-    insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
+    if(!vertical && !positive){
+        for(int i = x-swipe_increment; i >= x-swipe_size; i -= swipe_increment){
+            injectAbsEvent(ufd, i, y, false);
+            usleep(500);
+        }
+    }
+
+    injectAbsFinal(ufd);
     LOGI("SENT SWIPE\n");
 
     return 0;
 }
 
-static int wasTouched, oldX, oldY, nEventsInSwipe;
-static int64_t startT, lastSingleTapT;
-static int lastSingleTapX, lastSingleTapY, lastSingleTapDuration;
-//touchpanel resolution is 1440x720
-static void decide(int ufd, int touched, int x, int y) {
-    uint64_t d = now() - lastKbdTimestamp;
 
-    if(wasTouched && !touched && nEventsInSwipe == 0) {
-        int64_t duration = now() - startT;
-        int64_t timeSinceLastSingleTap = now() - lastSingleTapT;
-        LOGI("single tap %d, %d, %d, %d %" PRId64 " %" PRId64 "\n", x, y, y - oldY, x - oldX, duration, timeSinceLastSingleTap);
+struct input_event input_event_buffer[256];
+static int buffer_index = 0;
+static int touched = 0;
+static int sent_events = 0;
+static int first_x = -1;
+static int first_y = -1;
+static int latest_x = -1;
+static int latest_y = -1;
+// since we are mapping a 720 resolution touchpad onto a 1440 resolution screen, we have to multiply the y value to
+// get decent scrolling behaviour
+static float y_multiplier = 1;
+// TODO: pick a proper multiplier. best so far is 1.5
 
-        if(duration < 120*1000LL && timeSinceLastSingleTap < 500*1000LL && d > 1000*1000LL) {
-            LOGI("Got double tap\n");
-            if(isInRect(oldX, oldY, 570, 721, 600, 900)) {
-                LOGI("Double tap on space key\n");
-                injectKey(ufd, KEY_TAB);
+
+static void buffer(struct input_event e){
+    input_event_buffer[buffer_index] = e;
+    buffer_index++;
+    return;
+}
+
+static void reset(){
+    LOGI("reset\n");
+    buffer_index = 0;
+    touched = 0;
+    sent_events = 0;
+    first_x = -1;
+    first_y = -1;
+    latest_x = -1;
+    latest_y = -1;
+    return;
+}
+
+static void replay_buffer(int ufd, int correct_x){
+    LOGI("replaying buffer, index = %d\n", buffer_index);
+    // we could make this look better by checking for "correct_x" at the same time we check the code, but that would mean we have to check
+    // correct_x for every item in the buffer
+    if (correct_x){
+        for(int i = 0; i < buffer_index; i++){
+            if(input_event_buffer[i].code == ABS_MT_POSITION_X){
+                input_event_buffer[i].value = first_x;
+                // TODO scrolling is rough since we have a multiplier. position updates end up roughly 50 apart with 1.5 multiplier, vs 1-2 apart on the touch screen
+                // synthesize additional events to create smoother scrolling?
             }
+            write(ufd, &input_event_buffer[i], sizeof(input_event_buffer[i]));
         }
+    }
+    else{
+        for(int i = 0; i < buffer_index; i++){
+            write(ufd, &input_event_buffer[i], sizeof(input_event_buffer[i]));
+        }
+    }
+    buffer_index = 0;
+    return;
+}
 
-        lastSingleTapX = oldX;
-        lastSingleTapY = oldY;
-        lastSingleTapT = startT;
-        lastSingleTapDuration = duration;
+// send all of the events we have been saving, including the latest SYN
+static void act(int ufd, int correct_x){
+    if(!sent_events){
+        LOGI("act: adding tracking id\n");
+        insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
     }
-    if(!touched) {
-        wasTouched = 0;
-        return;
-    }
-    if(!wasTouched && touched) {
-        oldX = x;
-        oldY = y;
-        startT = now();
-        wasTouched = touched;
-        nEventsInSwipe = 0;
-        return;
-    }
+    LOGI("act: replaying buffer\n");
+    replay_buffer(ufd, correct_x);
+    return;
+}
+
+static void decide(int ufd){
+    uint64_t d = now() - lastKbdTimestamp;
+    int y_threshold = 40 * y_multiplier;
+
+
+    //TODO handle tap events for tab here before the KB delay
 
     //500ms after typing ignore
     if(d < 500*1000) {
-        oldX = x;
-        oldY = y;
+        reset();
         return;
     }
+    if( (abs(first_y - latest_y) > y_threshold)){
+        LOGI("decide: acting\n");
 
-    nEventsInSwipe++;
-    printf("%d, %d, %d, %d, %d\n", touched, x, y, y - oldY, x - oldX);
-    //2/3 width right side is used for scrolling
-    if(x > 300) {
-        if( abs(y - oldY) > 60) {
-            injectSwipe(ufd, oldX, oldY, x, y);
-            oldY = y;
-            oldX = x;
-            return;
-        }
-    } else {
-        //1/3 left side is used to trigger notifications
-        if( (y - oldY) > 280) {
-            system("cmd statusbar expand-notifications");
-            oldY = y;
-            oldX = x;
-            return;
-        }
-        if( (y - oldY) < -280) {
-            system("cmd statusbar collapse");
-            oldY = y;
-            oldX = x;
-            return;
-        }
+        // TODO: correct y values to avoid activating the notification panel. this goes along with picking a proper multiplier. Also might need to do the same to avoid activating the switcher?
+        act(ufd, 1);
+        sent_events = 1;
     }
-    if( (x - oldX) < -180) {
-        injectKey(ufd, KEY_LEFT);
-        oldY = y;
-        oldX = x;
-        return;
-    }
-    if( (x - oldX) > 180) {
-        injectKey(ufd, KEY_RIGHT);
-        oldY = y;
-        oldX = x;
-        return;
-    }
+    return;
 }
+
+static void finalize(int ufd){
+    insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, -1 );
+    insertEvent(ufd, EV_SYN, SYN_MT_REPORT, 0 );
+    insertEvent(ufd, EV_SYN, SYN_REPORT, 0 );
+    return;
+}
+
+// a touch starts with BTN_TOUCH DOWN. Store first x/y here
+// store and act on every SYN
+// when we see a difference > 60 start piping stored, and future syns until BTN_TOUCH UP
+static void handle(int ufd, struct input_event e){
+    /* LOGI("saw type = %d, code = %d, value = %d\n", e.type, e.code, e.value); */
+    if(e.type == EV_KEY && e.code == BTN_TOUCH && e.value == 1) {
+        LOGI("BTN_TOUCH DOWN\n");
+        touched = 1;
+        buffer(e);
+    }
+    else if(touched){
+        if(e.type == EV_KEY && e.code == BTN_TOUCH && e.value == 0){
+            if (sent_events){
+                LOGI("BTN_TOUCH UP: sent events\n");
+                buffer(e);
+                act(ufd, 0);
+                finalize(ufd);
+                reset();
+            }
+            else{
+                LOGI("BTN_TOUCH UP: resetting\n");
+                reset();
+            }
+        }
+        else if(e.type == EV_ABS && e.code == ABS_MT_POSITION_X) {
+            buffer(e);
+            if(first_x == -1){
+                LOGI("setting first_x\n");
+                first_x = e.value;
+                latest_x = e.value;
+            }
+            else{
+                LOGI("setting latest_x\n");
+                latest_x = e.value;
+            }
+        }
+        else if(e.type == EV_ABS && e.code == ABS_MT_POSITION_Y) {
+            e.value = y_multiplier * e.value;
+            buffer(e);
+            if(first_y == -1){
+                LOGI("setting first_y to %d\n", e.value);
+                first_y = e.value;
+                latest_y = e.value;
+            }
+            else{
+                LOGI("setting latest_y to %d\n", e.value);
+                latest_y = e.value;
+            }
+        }
+        else if(e.type == EV_SYN && e.code == SYN_REPORT) {
+            buffer(e);
+            LOGI("SYN seen, deciding\n");
+            decide(ufd);
+        }
+        else{
+            //we have started a touch, but haven't decided to act yet.
+            //save so we can replay if we decide to act
+            buffer(e);
+        }
+    }
+    return;
+}
+
 
 void *keyboard_monitor(void* ptr) {
     (void) ptr;
@@ -547,8 +583,8 @@ void *keyboard_monitor(void* ptr) {
     int fd = open_ev("aw9523-key");
 
     while(1) {
-        struct input_event e;
-        if(read(fd, &e, sizeof(e)) != sizeof(e)) break;
+        struct input_event kbe;
+        if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)) break;
         // TODO: USE THIS TO MAKE ALT, SHIFT, ETC keys toggle instead of requireing them to be held down?
         // basic idea is when we see a ALT_* or SHIFT_* release to send a ALT_* or SHIFT_* press, save state, then send the release when
         // we see another ALT_* or SHIFT_*
@@ -558,15 +594,14 @@ void *keyboard_monitor(void* ptr) {
 }
 
 int main() {
+    LOGI("start\n");
     int ufd = uinput_init();
     int origfd = original_input_init();
 
+    LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
     pthread_create(&keyboard_monitor_thread, NULL, keyboard_monitor, NULL);
 
-    int currentlyTouched = 0;
-    int currentX = -1;
-    int currentY = -1;
     while(1) {
         struct input_event e;
         if(read(origfd, &e, sizeof(e)) != sizeof(e)) break;
@@ -587,17 +622,6 @@ int main() {
                 fprintf(stderr, "Unknown event type %d\n", e.type);
                 break;
         };
-        if(e.type == EV_KEY && e.code == BTN_TOUCH) {
-            currentlyTouched = e.value;
-        }
-        if(e.type == EV_ABS && e.code == ABS_MT_POSITION_X) {
-            currentX = e.value;
-        }
-        if(e.type == EV_ABS && e.code == ABS_MT_POSITION_Y) {
-            currentY = e.value;
-        }
-        if(e.type == EV_SYN && e.code == SYN_REPORT) {
-            decide(ufd, currentlyTouched, currentX, currentY);
-        }
+        handle(ufd, e);
     }
 }
