@@ -419,7 +419,7 @@ int injectSwipe(int ufd, int xstart, int ystart, int xend, int yend){
 }
 
 
-struct input_event input_event_buffer[512];
+struct input_event input_event_buffer[2048];
 static int buffer_index = 0;
 static int touched = 0;
 static int sent_events = 0;
@@ -431,9 +431,10 @@ static int latest_y = -1;
 // get decent scrolling behaviour
 static float y_multiplier = 1.5;
 // TODO: pick a proper multiplier. best so far is 1.5
-struct input_event event_synth_buffer[1026];
+struct input_event event_synth_buffer[2048];
 int synth_buffer_index = 0;
-
+struct input_event last_y;
+int last_y_valid = 0;
 
 
 static void buffer(struct input_event e){
@@ -452,6 +453,7 @@ static void reset(){
     latest_x = -1;
     latest_y = -1;
     synth_buffer_index = 0;
+    last_y_valid = 0;
     return;
 }
 
@@ -494,7 +496,7 @@ static void tv_diff_divide(const unsigned long div, struct timeval ya, struct ti
   /dev/input/event6: EV_SYN       SYN_REPORT           00000000
  */
 static void synth_scroll_packet(int y, int x, struct timeval time){
-    LOGI("synthing a scroll packet a y = %d, x = %d\n", y, x);
+    LOGI("synthing a scroll packet at time           [%ld.%ld],                 y = %d\n", time.tv_sec, time.tv_usec, y);
     struct input_event tmp;
     // Tracking ID
     tmp.time = time;
@@ -541,13 +543,15 @@ static void synth_scroll_packet(int y, int x, struct timeval time){
     return;
 }
 
+// pass in the last y input_event seen when we last replayed the buffer
 static void create_synth_buffer(){
 
     int event_packet_length = 7;
-    int synth_threshold = 20; // how far apart do any two packets need to be to synthesize packets between them
+    int synth_threshold = 5; // how far apart do any two packets need to be to synthesize packets between them
 
     int last_packet = 0;
     int diff = 0;
+    int div = 0;
 
     struct input_event event_ya;
     struct input_event event_yb;
@@ -563,6 +567,15 @@ static void create_synth_buffer(){
         current_event = input_event_buffer[i];
         synth_buffer(current_event);
 
+        if(last_y_valid){
+            // if we have last_y_valid then we are in the middle of touch_down -> touch_up
+            // but have already emptied the last buffer.
+            // our current event type should be a ABS_MT_TRACKING_ID
+            event_ya = last_y;
+            prev_x = input_event_buffer[i+1];
+            event_yb = input_event_buffer[i+2];
+        }
+
         if(current_event.code == ABS_MT_POSITION_Y){
             event_ya = current_event;
             if(i+event_packet_length < buffer_index){
@@ -575,13 +588,17 @@ static void create_synth_buffer(){
             }
         }
 
-        if(current_event.code == SYN_REPORT && !last_packet ){
+        if( last_y_valid || (current_event.code == SYN_REPORT && !last_packet)){
+            last_y_valid = 0;
+            LOGI("synthing a scroll packet between times a = [%ld.%ld], b = [%ld.%ld], ya = %d, yb = %d\n", event_ya.time.tv_sec, event_ya.time.tv_usec, event_yb.time.tv_sec, event_yb.time.tv_usec, event_ya.value, event_yb.value);
             diff = event_ya.value - event_yb.value;
+            div =  abs(diff)/synth_threshold;
             if ( abs(diff) >= synth_threshold){
-                tv_diff_divide((unsigned long) (diff % synth_threshold), event_ya.time, event_yb.time, &timediff);
+                tv_diff_divide((unsigned long) div, event_ya.time, event_yb.time, &timediff);
+                LOGI("synthing timediff = [%ld.%ld]\n", timediff.tv_sec, timediff.tv_usec);
                 synth_y = event_ya.value;
                 synth_time = event_ya.time;
-                for(int j = 0; j <= (diff/synth_threshold) ; j++){
+                for(int j = 0; j < div ; j++){
                     if (diff > 0){
                         // up swipe, decreasing value from a -> b
                         // timestamps should be evenly distributed between
@@ -610,8 +627,12 @@ static void replay_buffer(int ufd, int correct_x, int synth_swipe){
         // synthesize additional events to create smoother scrolling
         create_synth_buffer();
         for(int i = 0; i < synth_buffer_index; i++){
+            if(event_synth_buffer[i].type == EV_ABS && event_synth_buffer[i].code == ABS_MT_POSITION_Y){
+                last_y = event_synth_buffer[i];
+            }
             write(ufd, &event_synth_buffer[i], sizeof(event_synth_buffer[i]));
         }
+        last_y_valid = 1;
     }
     else if (correct_x){
         for(int i = 0; i < buffer_index; i++){
@@ -657,7 +678,7 @@ static void decide(int ufd){
         LOGI("decide: acting\n");
 
         // TODO: correct y values to avoid activating the notification panel. this goes along with picking a proper multiplier. Also might need to do the same to avoid activating the switcher?
-        act(ufd, 0, 1);
+        act(ufd, 1, 0);
         sent_events = 1;
     }
     return;
