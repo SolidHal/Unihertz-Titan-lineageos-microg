@@ -572,18 +572,64 @@ static void handle(int ufd, struct input_event e){
     return;
 }
 
+int alt_toggle = 0;
+int alt_lock = 0;
+int shift_toggle = 0;
+int shift_lock = 0;
 
 void *keyboard_monitor(void* ptr) {
-    (void) ptr;
+    int ufd = *(int*)ptr;
+
+    uint64_t lock_time = 1000*1000LL; // 1 second?
+
     //aw9523-key
     int fd = open_ev("aw9523-key");
 
     while(1) {
         struct input_event kbe;
-        if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)) break;
-        // TODO: USE THIS TO MAKE ALT, SHIFT, ETC keys toggle instead of requireing them to be held down?
-        // basic idea is when we see a ALT_* or SHIFT_* release to send a ALT_* or SHIFT_* press, save state, then send the release when
-        // we see another ALT_* or SHIFT_*
+        if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)){
+            if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTALT || kbe.code == KEY_RIGHTALT)){
+                if(!alt_toggle){
+                    injectKeyDown(ufd, KEY_RIGHTALT);
+                }
+                else if(alt_toggle){
+                    if(now() - lastKbdTimestamp < lock_time){
+                        alt_lock = 1;
+                        alt_toggle = 0;
+                    }
+                }
+                else if(alt_lock){
+                    alt_lock = 0;
+                    injectKeyUp(ufd, KEY_RIGHTALT);
+                }
+            }
+            else if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTSHIFT || kbe.code == KEY_RIGHTSHIFT)){
+                if(!shift_toggle){
+                    injectKeyDown(ufd, KEY_LEFTSHIFT);
+                }
+                else if(shift_toggle){
+                    if(now() - lastKbdTimestamp < lock_time){
+                        shift_lock = 1;
+                        shift_toggle = 0;
+                    }
+                }
+                else if(shift_lock){
+                    shift_lock = 0;
+                    injectKeyUp(ufd, KEY_LEFTSHIFT);
+                }
+            }
+            else {
+                // clear any toggles
+                if(alt_toggle){
+                    alt_toggle = 0;
+                    injectKeyUp(ufd, KEY_RIGHTALT);
+                }
+                if(shift_toggle){
+                    shift_toggle = 0;
+                    injectKeyUp(ufd, KEY_LEFTSHIFT);
+                }
+            }
+        }
         lastKbdTimestamp = now();
     }
     return NULL;
@@ -596,7 +642,7 @@ int main() {
 
     LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
-    pthread_create(&keyboard_monitor_thread, NULL, keyboard_monitor, NULL);
+    pthread_create(&keyboard_monitor_thread, NULL, keyboard_monitor, (void*) &ufd);
 
     while(1) {
         struct input_event e;

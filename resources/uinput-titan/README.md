@@ -237,3 +237,4 @@ static void decide(int ufd, int touched, int x, int y) {
         return;
     }
 }
+{}
