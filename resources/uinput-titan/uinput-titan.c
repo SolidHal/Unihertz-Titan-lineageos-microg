@@ -429,12 +429,8 @@ static int latest_x = -1;
 static int latest_y = -1;
 // since we are mapping a 720 resolution touchpad onto a 1440 resolution screen, we have to multiply the y value to
 // get decent scrolling behaviour
-static float y_multiplier = 1.5;
-// TODO: pick a proper multiplier. best so far is 1.5
-struct input_event event_synth_buffer[2048];
-int synth_buffer_index = 0;
-struct input_event last_y;
-int last_y_valid = 0;
+static float y_multiplier = 1.7;
+// TODO: pick a proper multiplier. best so far is 1.7
 
 
 static void buffer(struct input_event e){
@@ -452,191 +448,13 @@ static void reset(){
     first_y = -1;
     latest_x = -1;
     latest_y = -1;
-    synth_buffer_index = 0;
-    last_y_valid = 0;
     return;
 }
 
-static void synth_buffer(struct input_event event){
-    event_synth_buffer[synth_buffer_index] = event;
-    synth_buffer_index++;
-}
-
-/**
- * Compute a fraction of given struct timeval.
- *
- * \param div The integer value to divide by.
- * \param tv The timevalue to divide.
- * \param result Contains (1 / mult) * tv on return.
- */
-void tv_divide(const unsigned long div, const struct timeval *tv, struct timeval *result)
-{
-    uint64_t x = ((uint64_t)tv->tv_sec * 1000 * 1000 + tv->tv_usec) / div;
-    result->tv_sec = x / 1000 / 1000;
-    result->tv_usec = x % (1000 * 1000);
-    return;
-}
-
-static void tv_diff_divide(const unsigned long div, struct timeval ya, struct timeval yb, struct timeval *ret){
-    // returns a struct timeval of diff(yb -ya) / div
-    struct timeval timediff;
-    timersub(&yb, &ya, &timediff);
-    tv_divide(div, &timediff, ret);
-    return;
-}
-
-/*
-  creates a sequence of events that looks like:
-  /dev/input/event6: EV_ABS       ABS_MT_TRACKING_ID   00000000
-  /dev/input/event6: EV_ABS       ABS_MT_POSITION_X    000004ec
-  /dev/input/event6: EV_ABS       ABS_MT_POSITION_Y    00000243
-  /dev/input/event6: EV_ABS       ABS_MT_TOUCH_MAJOR   00000006
-  /dev/input/event6: EV_ABS       ABS_MT_TOUCH_MINOR   00000005
-  /dev/input/event6: EV_SYN       SYN_MT_REPORT        00000000
-  /dev/input/event6: EV_SYN       SYN_REPORT           00000000
- */
-static void synth_scroll_packet(int y, int x, struct timeval time){
-    LOGI("synthing a scroll packet at time           [%ld.%ld],                 y = %d\n", time.tv_sec, time.tv_usec, y);
-    struct input_event tmp;
-    // Tracking ID
-    tmp.time = time;
-    tmp.type = EV_ABS;
-    tmp.code = ABS_MT_TRACKING_ID;
-    tmp.value = 0;
-    synth_buffer(tmp);
-    // POS_X
-    tmp.time = time;
-    tmp.type = EV_ABS;
-    tmp.code = ABS_MT_POSITION_X;
-    tmp.value = x;
-    synth_buffer(tmp);
-    // POS_Y
-    tmp.time = time;
-    tmp.type = EV_ABS;
-    tmp.code = ABS_MT_POSITION_Y;
-    tmp.value = y;
-    synth_buffer(tmp);
-    // TOUCH_MAJOR
-    tmp.time = time;
-    tmp.type = EV_ABS;
-    tmp.code = ABS_MT_TOUCH_MAJOR;
-    tmp.value = 3;
-    synth_buffer(tmp);
-    // TOUCH_MINOR
-    tmp.time = time;
-    tmp.type = EV_ABS;
-    tmp.code = ABS_MT_TOUCH_MINOR;
-    tmp.value = 2;
-    synth_buffer(tmp);
-    // SYN_MT_REPORT
-    tmp.time = time;
-    tmp.type = EV_SYN;
-    tmp.code = SYN_MT_REPORT;
-    tmp.value = 0;
-    synth_buffer(tmp);
-    // SYN_REPORT
-    tmp.time = time;
-    tmp.type = EV_SYN;
-    tmp.code = SYN_REPORT;
-    tmp.value = 0;
-    synth_buffer(tmp);
-    return;
-}
-
-// pass in the last y input_event seen when we last replayed the buffer
-static void create_synth_buffer(){
-
-    int event_packet_length = 7;
-    int synth_threshold = 5; // how far apart do any two packets need to be to synthesize packets between them
-
-    int last_packet = 0;
-    int diff = 0;
-    int div = 0;
-
-    struct input_event event_ya;
-    struct input_event event_yb;
-    struct input_event current_event;
-    struct input_event prev_x;
-
-    struct timeval timediff;
-
-    int synth_y = 0;
-    struct timeval synth_time;
-
-    for(int i = 0; i< buffer_index; i++){
-        current_event = input_event_buffer[i];
-        synth_buffer(current_event);
-
-        if(last_y_valid){
-            // if we have last_y_valid then we are in the middle of touch_down -> touch_up
-            // but have already emptied the last buffer.
-            // our current event type should be a ABS_MT_TRACKING_ID
-            event_ya = last_y;
-            prev_x = input_event_buffer[i+1];
-            event_yb = input_event_buffer[i+2];
-        }
-
-        if(current_event.code == ABS_MT_POSITION_Y){
-            event_ya = current_event;
-            if(i+event_packet_length < buffer_index){
-                prev_x = input_event_buffer[i-1];
-                event_yb = input_event_buffer[i+event_packet_length];
-            }
-            else{
-                // we are on the last packet, nothing left to do
-                last_packet = 1;
-            }
-        }
-
-        if( last_y_valid || (current_event.code == SYN_REPORT && !last_packet)){
-            last_y_valid = 0;
-            LOGI("synthing a scroll packet between times a = [%ld.%ld], b = [%ld.%ld], ya = %d, yb = %d\n", event_ya.time.tv_sec, event_ya.time.tv_usec, event_yb.time.tv_sec, event_yb.time.tv_usec, event_ya.value, event_yb.value);
-            diff = event_ya.value - event_yb.value;
-            div =  abs(diff)/synth_threshold;
-            if ( abs(diff) >= synth_threshold){
-                tv_diff_divide((unsigned long) div, event_ya.time, event_yb.time, &timediff);
-                LOGI("synthing timediff = [%ld.%ld]\n", timediff.tv_sec, timediff.tv_usec);
-                synth_y = event_ya.value;
-                synth_time = event_ya.time;
-                for(int j = 0; j < div ; j++){
-                    if (diff > 0){
-                        // up swipe, decreasing value from a -> b
-                        // timestamps should be evenly distributed between
-                        // event_ya.timeval and event_yb.timeval
-                        // so diff % synth_threshold divisions of event_yb.timeval - event_ya.timeval
-                        synth_y = synth_y - synth_threshold;
-                        timeradd(&timediff, &synth_time, &synth_time);
-                        synth_scroll_packet(synth_y, prev_x.value, synth_time);
-                    }
-                    else if (diff < 0){
-                        // down swipe, increasing value from a -> b
-                        synth_y = synth_y + synth_threshold;
-                        timeradd(&timediff, &synth_time, &synth_time);
-                        synth_scroll_packet(synth_y, prev_x.value, synth_time);
-                    }
-                }
-            }
-        }
-    }
-}
-
-static void replay_buffer(int ufd, int correct_x, int synth_swipe){
-    LOGI("replaying buffer, index = %d, correct_x = %d, synth_swipe = %d\n", buffer_index, correct_x, synth_swipe);
-    if (synth_swipe){
-        // scrolling is rough since we have a multiplier. position updates end up roughly 50 apart with 1.5 multiplier, vs 1-2 apart on the touch screen
-        // synthesize additional events to create smoother scrolling
-        create_synth_buffer();
-        for(int i = 0; i < synth_buffer_index; i++){
-            if(event_synth_buffer[i].type == EV_ABS && event_synth_buffer[i].code == ABS_MT_POSITION_Y){
-                last_y = event_synth_buffer[i];
-            }
-            write(ufd, &event_synth_buffer[i], sizeof(event_synth_buffer[i]));
-        }
-        last_y_valid = 1;
-    }
-    else if (correct_x){
+static void replay_buffer(int ufd, int correct_x){
+    if (correct_x){
         for(int i = 0; i < buffer_index; i++){
-            if(input_event_buffer[i].code == ABS_MT_POSITION_X){
+            if(input_event_buffer[i].type == EV_ABS && input_event_buffer[i].code == ABS_MT_POSITION_X){
                 input_event_buffer[i].value = first_x;
             }
             write(ufd, &input_event_buffer[i], sizeof(input_event_buffer[i]));
@@ -652,13 +470,13 @@ static void replay_buffer(int ufd, int correct_x, int synth_swipe){
 }
 
 // send all of the events we have been saving, including the latest SYN
-static void act(int ufd, int correct_x, int synth_swipe){
+static void act(int ufd, int correct_x){
     if(!sent_events){
         LOGI("act: adding tracking id\n");
         insertEvent(ufd, EV_ABS, ABS_MT_TRACKING_ID, 0 );
     }
     LOGI("act: replaying buffer\n");
-    replay_buffer(ufd, correct_x, synth_swipe);
+    replay_buffer(ufd, correct_x);
     return;
 }
 
@@ -674,11 +492,11 @@ static void decide(int ufd){
         reset();
         return;
     }
-    if( (abs(first_y - latest_y) > y_threshold && buffer_index >= 14)){
+    if( (abs(first_y - latest_y) > y_threshold)){
         LOGI("decide: acting\n");
 
         // TODO: correct y values to avoid activating the notification panel. this goes along with picking a proper multiplier. Also might need to do the same to avoid activating the switcher?
-        act(ufd, 1, 0);
+        act(ufd, 1);
         sent_events = 1;
     }
     return;
@@ -706,7 +524,7 @@ static void handle(int ufd, struct input_event e){
             if (sent_events){
                 LOGI("BTN_TOUCH UP: sent events\n");
                 buffer(e);
-                act(ufd, 0, 0);
+                act(ufd, 0);
                 finalize(ufd);
                 reset();
             }
