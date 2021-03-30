@@ -77,10 +77,10 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 1440,
+                    .maximum = 720,
                     .fuzz = 0,
                     .flat = 0,
-                    .resolution = 1440,
+                    .resolution = 720,
                     },
     };
     ioctl(fd, UI_ABS_SETUP, abs_setup_y);
@@ -143,7 +143,7 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 1440,
+                    .maximum = 720,
                     .fuzz = 0,
                     .flat = 0,
                     .resolution = 0,
@@ -429,8 +429,9 @@ static int latest_x = -1;
 static int latest_y = -1;
 // since we are mapping a 720 resolution touchpad onto a 1440 resolution screen, we have to multiply the y value to
 // get decent scrolling behaviour
-static float y_multiplier = 1.7;
-// TODO: pick a proper multiplier. best so far is 1.7
+static float y_multiplier = 1;
+// TODO: pick a proper multiplier. best so far is 1.7 for y
+static float x_multiplier = 1;
 
 
 static void buffer(struct input_event e){
@@ -482,7 +483,8 @@ static void act(int ufd, int correct_x){
 
 static void decide(int ufd){
     uint64_t d = now() - lastKbdTimestamp;
-    int y_threshold = 40 * y_multiplier;
+    int y_threshold = 30 * y_multiplier;
+    int x_threshold = 30 * x_multiplier;
 
 
     //TODO handle tap events for tab here before the KB delay
@@ -492,11 +494,14 @@ static void decide(int ufd){
         reset();
         return;
     }
-    if( (abs(first_y - latest_y) > y_threshold)){
+
+    // TODO: arrow key mode?
+
+    if( (abs(first_y - latest_y) > y_threshold) || (abs(first_x - latest_x) > x_threshold)){
         LOGI("decide: acting\n");
 
         // TODO: correct y values to avoid activating the notification panel. this goes along with picking a proper multiplier. Also might need to do the same to avoid activating the switcher?
-        act(ufd, 1);
+        act(ufd, 0);
         sent_events = 1;
     }
     return;
@@ -509,6 +514,11 @@ static void finalize(int ufd){
     return;
 }
 
+int tapped = 0;
+int was_tapped = 0;
+int tap_x = 0;
+int tap_y = 0;
+static int64_t last_single_tap_time = 0;
 // a touch starts with BTN_TOUCH DOWN. Store first x/y here
 // store and act on every SYN
 // when we see a difference > 60 start piping stored, and future syns until BTN_TOUCH UP
@@ -518,6 +528,7 @@ static void handle(int ufd, struct input_event e){
         LOGI("BTN_TOUCH DOWN\n");
         touched = 1;
         buffer(e);
+
     }
     else if(touched){
         if(e.type == EV_KEY && e.code == BTN_TOUCH && e.value == 0){
@@ -530,18 +541,42 @@ static void handle(int ufd, struct input_event e){
             }
             else{
                 LOGI("BTN_TOUCH UP: resetting\n");
+                if(was_tapped){
+                    LOGI("entered was_tapped");
+                    if( (now() - lastKbdTimestamp) > 1000*1000LL &&  (now() - last_single_tap_time) < 500*1000LL ){
+                        LOGI("double tap time check passed");
+                        if(isInRect(tap_x, tap_y, 1200, 1224, 600, 800)) {
+                            LOGI("double tap first rect passed");
+                            if(isInRect(latest_x, latest_y, 1200, 1224, 600, 800)) {
+                                LOGI("Double tap on space key\n");
+                                injectKey(ufd, KEY_TAB);
+                            }
+
+                        }
+                        was_tapped = 0;
+                        LOGI("setting was_tapped = 0");
+                    }
+                }
+                else{
+                    LOGI("setting was_tapped = 1");
+                    was_tapped = 1;
+                    tap_x = latest_x;
+                    tap_y = latest_y;
+                    last_single_tap_time = now();
+                }
+
                 reset();
             }
         }
         else if(e.type == EV_ABS && e.code == ABS_MT_POSITION_X) {
             buffer(e);
             if(first_x == -1){
-                LOGI("setting first_x\n");
+                LOGI("setting first_x to %d\n", e.value);
                 first_x = e.value;
                 latest_x = e.value;
             }
             else{
-                LOGI("setting latest_x\n");
+                LOGI("setting latest_x to %d\n", e.value);
                 latest_x = e.value;
             }
         }
@@ -587,6 +622,8 @@ void *keyboard_monitor(void* ptr) {
 
     while(1) {
         struct input_event kbe;
+
+        //TODO: put icons in notification bar representing these
         if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)){
             if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTALT || kbe.code == KEY_RIGHTALT)){
                 if(!alt_toggle){

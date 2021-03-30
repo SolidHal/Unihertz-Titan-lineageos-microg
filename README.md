@@ -165,16 +165,33 @@ adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
 
 #### Functionalities
 
-Swipe left is left arrow key
-Swipe right is right arrow key
+##### Added keyboard functionality
+- single pressing alt or shift enters toggle mode
+  - the next pressed key will be modified by alt or shift, and alt/shift will then be disabled
+- quickly double pressing alt or shift enters lock mode
+  - all keys pressed will be modified by alt/shift until alt/shift is pressed again
+  - TODO: double tap on space mapped to tab
+  - TODO: recents mapped to fn layer
+    - HJKL or IJKL mapped to arrows
+    - T/Y curly brace
+  
+  
+*note:TODO currently the alt+shift layer does not have any functionality so nothing will happen when keys are pressed with both modifiers active
+ - 
 
-On left 1/3rd of keyboard:
-- swipe down reveals the notification panel
-- swipe up closes it
 
-Right 2/3rds of keyboard are used for scrolling.
+##### By default the touchpad is in navigation mode
+It is meant to act as an extension of the touch screen. 
+It is designed to allow for gestures, scrolling vertically and horizontally, and swipes while preventing taps
+When used with the "Gesture navigation", all navigation gestures can be performed on the touchpad
+This allows for the "recents" and "back" keys to be remapped
 
-Double tap on the space key inputs a tab.
+##### pressing the red button on the left side of the device activates terminal mode
+
+- swipes left and right are remapped to arrow keys
+- 
+
+
 
 
 
