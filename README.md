@@ -137,9 +137,6 @@ hide the software keyboard when using the hardware keyboard:
 adb shell settings put secure show_ime_with_hard_keyboard 1
 ```
 
-TODO: 
-- binding for alt/ctrl/esc
-
 ### Touchpad configuration
 
 since none of the suggested .idc modifications worked properly, I resurrected uinput-titan from https://github.com/phhusson/unihertz_titan
@@ -174,6 +171,7 @@ adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
 - quickly double pressing alt or shift enters lock mode
   - all keys pressed will be modified by alt/shift until alt/shift is pressed again
   - TODO: double tap on space mapped to tab
+  - TODO: escape key?
   - back mapped to ctrl key
   - recents/app_switch mapped to fn layer
     - HJKL or IJKL mapped to arrows
