@@ -214,6 +214,17 @@ You have to paste the following code in your vendor build.prop (to prevent the l
 debug.sf.latch_unsignaled=1
 ```
 
+### useful adb debugging commands
+```
+adb logcat | grep "UINPUT"
+```
+```
+adb shell getevent -i
+```
+```
+adb shell getevent -v
+```
+
 ## Recover bricked titan / restore to stock rom
 
 1)  Flash the latest Android 9 official build. Android 10 images are only available at ota files so far. 
