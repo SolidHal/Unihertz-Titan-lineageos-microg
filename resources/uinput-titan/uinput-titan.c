@@ -202,6 +202,7 @@ static int open_ev(const char *lookupName) {
         char name[128];
         ioctl(fd, EVIOCGNAME(sizeof(name)), name);
         if(strcmp(name, lookupName) == 0) {
+            LOGI("open_ev name = %s and lookupName = %s\n",name, lookupName);
             return fd;
         }
 
@@ -611,21 +612,33 @@ int alt_toggle = 0;
 int alt_lock = 0;
 int shift_toggle = 0;
 int shift_lock = 0;
-
+//TODO: actually put in the key lock logic, also reintroduce the fn and ctl keys and arrow keys
 void *keyboard_monitor(void* ptr) {
     int ufd = *(int*)ptr;
 
-    uint64_t lock_time = 1000*1000LL; // 1 second?
+    // 1 second? TODO: no its not
+    uint64_t lock_time = 1000*1000LL;
+    struct input_event kbe;
 
     //aw9523-key
+    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "start\n");
     int fd = open_ev("aw9523-key");
+    if(fd<0){
+        __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "open failed!\n");
+        return NULL;
+    }
+    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "opened successfully\n");
 
     while(1) {
-        struct input_event kbe;
-
-        //TODO: put icons in notification bar representing these
         if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)){
+            break;
+        }
+        else{
+            lastKbdTimestamp = now();
+            __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read key\n");
+
             if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTALT || kbe.code == KEY_RIGHTALT)){
+                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read alt\n");
                 if(!alt_toggle){
                     injectKeyDown(ufd, KEY_RIGHTALT);
                 }
@@ -641,6 +654,7 @@ void *keyboard_monitor(void* ptr) {
                 }
             }
             else if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTSHIFT || kbe.code == KEY_RIGHTSHIFT)){
+                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read shift\n");
                 if(!shift_toggle){
                     injectKeyDown(ufd, KEY_LEFTSHIFT);
                 }
@@ -667,10 +681,11 @@ void *keyboard_monitor(void* ptr) {
                 }
             }
         }
-        lastKbdTimestamp = now();
     }
+    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "error, returning\n");
     return NULL;
 }
+
 
 int main() {
     LOGI("start\n");
@@ -680,6 +695,7 @@ int main() {
     LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
     pthread_create(&keyboard_monitor_thread, NULL, keyboard_monitor, (void*) &ufd);
+    LOGI("keyboard thread created\n");
 
     while(1) {
         struct input_event e;

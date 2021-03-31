@@ -9,7 +9,9 @@ key 8     7
 key 9     8
 key 10    9
 key 11    0
-key 158   BACK
+# remap back to ctrl
+# key 158   BACK
+key 158   CTRL_LEFT
 key 230   SOFT_RIGHT
 key 60    SOFT_RIGHT
 key 107   ENDCALL
@@ -98,4 +100,8 @@ key 159   MEDIA_FAST_FORWARD
 # agold add
 key 249   FUNC1
 key 250   FUNC2
+
+# remap app switcher to function
+# key 580   APP_SWITCH
+key 580   FUNCTION
 

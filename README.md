@@ -158,6 +158,9 @@ make
 adb root
 adb remount
 adb shell mount -o remount,rw /
+adb push resources/keyboard/Android10_function/system_usr_idc/* /system/usr/idc/
+adb push resources/keyboard/Android10_function/system_usr_keychars/* /system/usr/keychars/
+adb push resources/keyboard/Android10_function/system_usr_keylayout/* /system/usr/keylayout/
 adb push resources/uinput-titan/uinput-titan /system/bin/uinput-titan
 adb push resources/uinput-titan/titan.rc /system/etc/init/
 adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
@@ -171,9 +174,11 @@ adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
 - quickly double pressing alt or shift enters lock mode
   - all keys pressed will be modified by alt/shift until alt/shift is pressed again
   - TODO: double tap on space mapped to tab
-  - TODO: recents mapped to fn layer
+  - back mapped to ctrl key
+  - recents/app_switch mapped to fn layer
     - HJKL or IJKL mapped to arrows
     - T/Y curly brace
+    - TODO: make graphic that shows mapping
   
   
 *note:TODO currently the alt+shift layer does not have any functionality so nothing will happen when keys are pressed with both modifiers active
@@ -186,12 +191,10 @@ It is designed to allow for gestures, scrolling vertically and horizontally, and
 When used with the "Gesture navigation", all navigation gestures can be performed on the touchpad
 This allows for the "recents" and "back" keys to be remapped
 
-##### pressing the red button on the left side of the device activates terminal mode
+##### TODO: pressing the red button on the left side of the device activates terminal mode
 
 - swipes left and right are remapped to arrow keys
 - 
-
-
 
 
 
@@ -200,28 +203,6 @@ This allows for the "recents" and "back" keys to be remapped
 ruKeyboard or anysoft
 
 info on https://unihertz-titan.neocities.org
-
-### Fully functional ctrl key
-```
-Adding a fully functional CTRL key. (Root only) 
-
-Basic steps to change the BACK key (or RECENTS key) to the CTRL_LEFT key (only if rooted):
-
-key 580 = Recents key
-key 158 =  Back key
-
-1º Install Total Commander app and open it. 
-2º Go to /system/usr/keylayout/Generic.kl, click on it and edit it.
-3º Choose:
-       - If you want to replace BACK key: search "key 158 BACK" and replace for "key 158 CTRL_LEFT".
-       - If you want to replace RECENTS key: search "KEY 580 APP_SWITCH" and replace for "key 580 CTRL_LEFT".
-4º Save the file.
-5º Reboot the phone.
-
-To remap holding back or recents to regain functionality use a button remapper of choice. 
-Thanks to @diejuse on the discord
-```
-
 
 
 ### Ui stuttering issues? 
