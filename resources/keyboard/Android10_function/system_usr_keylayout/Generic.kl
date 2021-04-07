@@ -178,9 +178,8 @@ key 155   ENVELOPE
 key 156   BOOKMARK
 # key 157 "KEY_COMPUTER"
 
-# remap back to ctrl
+# unmap back so we can remap it to ctrl
 # key 158   BACK
-key 158   CTRL_LEFT
 
 
 key 159   FORWARD
@@ -412,9 +411,8 @@ key 484   B                 FUNCTION
 key 522   STAR
 key 523   POUND
 
-# remap app switcher to function
+# unmap app switcher so we can remap it to function
 # key 580   APP_SWITCH
-key 580   FUNCTION
 
 key 582   VOICE_ASSIST
 

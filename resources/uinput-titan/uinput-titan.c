@@ -175,9 +175,15 @@ static int uinput_init() {
     // keyboard events
     ioctl(fd, UI_SET_KEYBIT, KEY_LEFT);
     ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_UP);
+    ioctl(fd, UI_SET_KEYBIT, KEY_DOWN);
     ioctl(fd, UI_SET_KEYBIT, KEY_TAB);
     ioctl(fd, UI_SET_KEYBIT, KEY_PAGEUP);
     ioctl(fd, UI_SET_KEYBIT, KEY_PAGEDOWN);
+    ioctl(fd, UI_SET_KEYBIT, KEY_FN);
+    ioctl(fd, UI_SET_KEYBIT, KEY_LEFTCTRL);
+    ioctl(fd, UI_SET_KEYBIT, KEY_LEFTSHIFT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_RIGHTALT);
 
     // lets us behave as a touchscreen. Inputs are directly mapped onto display
     ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_DIRECT);
@@ -300,12 +306,14 @@ int isInRect(int x, int y, int top, int bottom, int left, int right) {
 
 
 int injectKeyDown(int ufd, int key){
+    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-INJECT", "injecting down key = %d\n", key);
     insertEvent(ufd, EV_KEY, key, 1);
     insertEvent(ufd, EV_SYN, SYN_REPORT, 0);
     return 0;
 }
 
 int injectKeyUp(int ufd, int key){
+    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-INJECT", "injecting up key = %d\n", key);
     insertEvent(ufd, EV_KEY, key, 0);
     insertEvent(ufd, EV_SYN, SYN_REPORT, 0);
     return 0;
@@ -608,17 +616,47 @@ static void handle(int ufd, struct input_event e){
     return;
 }
 
-int alt_toggle = 0;
-int alt_lock = 0;
-int shift_toggle = 0;
-int shift_lock = 0;
-//TODO: actually put in the key lock logic, also reintroduce the fn and ctl keys and arrow keys
+void *uinput_titan_monitor(void* ptr){
+    (void)ptr;
+    struct input_event kbe;
+
+    int fd = open_ev("titan-uinput");
+    if(fd<0){
+        __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-META-MON-THREAD", "open failed!\n");
+        return NULL;
+    }
+    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-META-MON-THREAD", "open successfully!\n");
+
+    while(1) {
+        if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)){
+            break;
+        }
+        else{
+            if(kbe.type == EV_KEY){
+                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-META-MON-THREAD", "read key code = %d, value = %d\n", kbe.code, kbe.value);
+            }
+        }
+    }
+    return NULL;
+}
+
+#define NUM_KEYS  4
+int key_toggles[NUM_KEYS];
+int key_locks[NUM_KEYS];
+int ALT_INDEX = 0;
+int SHIFT_INDEX = 1;
+int FN_INDEX = 2;
+int CTRL_INDEX = 3;
+int KEY_CODES[NUM_KEYS] = {KEY_RIGHTALT, KEY_LEFTSHIFT, KEY_FN, KEY_LEFTCTRL};
+// TODO: ctrl key not working, likely some interaction with the idcs/keymaps/keylayouts?, also need to fix arrow keys
 void *keyboard_monitor(void* ptr) {
     int ufd = *(int*)ptr;
+    /* (void)ptr; */
 
     // 1 second? TODO: no its not
     uint64_t lock_time = 1000*1000LL;
     struct input_event kbe;
+    int key_index = -1;
 
     //aw9523-key
     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "start\n");
@@ -634,51 +672,61 @@ void *keyboard_monitor(void* ptr) {
             break;
         }
         else{
-            lastKbdTimestamp = now();
-            __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read key\n");
 
-            if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTALT || kbe.code == KEY_RIGHTALT)){
-                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read alt\n");
-                if(!alt_toggle){
-                    injectKeyDown(ufd, KEY_RIGHTALT);
+            if(kbe.type == EV_KEY){
+                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read key code = %d, value = %d\n", kbe.code, kbe.value);
+            }
+
+            if(kbe.type == EV_KEY && kbe.value == 1){
+                lastKbdTimestamp = now();
+                if((kbe.code == KEY_LEFTALT || kbe.code == KEY_RIGHTALT) && kbe.value == 1){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read alt\n");
+                    key_index = 0;
                 }
-                else if(alt_toggle){
-                    if(now() - lastKbdTimestamp < lock_time){
-                        alt_lock = 1;
-                        alt_toggle = 0;
+                else if((kbe.code == KEY_LEFTSHIFT || kbe.code == KEY_RIGHTSHIFT) && kbe.value == 1){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read shift\n");
+                    key_index = 1;
+                }
+                // we remap KEY_APPSELECT to KEY_FN in the .kl files, but that behavior is above the uinput events we are consuming so we have to watch for APPSELECT still
+                else if(kbe.code == KEY_APPSELECT && kbe.value == 1){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read fn\n");
+                    key_index = 2;
+                }
+                // we remap KEY_BACK to KEY_LEFTCTRL in the .kl files, but that behavior is above the uinput events we are consuming so we have to watch for BACK still
+                else if(kbe.code == KEY_BACK && kbe.value == 1){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read control\n");
+                    key_index = 3;
+                }
+                if(key_index != -1){
+                    if(key_locks[key_index]){
+                        key_locks[key_index] = 0;
+                        __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "locked off %d\n", key_index);
+                        injectKeyUp(ufd, KEY_CODES[key_index]);
+                    }
+                    else if(!key_toggles[key_index]){
+                        __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "toggled on %d\n", key_index);
+                        key_toggles[key_index] = 1;
+                        injectKeyDown(ufd, KEY_CODES[key_index]);
+                    }
+                    else if(key_toggles[key_index]){
+                        if(now() - lastKbdTimestamp < lock_time){
+                            key_locks[key_index] = 1;
+                            key_toggles[key_index] = 0;
+                            __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "locked on %d\n", key_index);
+                        }
                     }
                 }
-                else if(alt_lock){
-                    alt_lock = 0;
-                    injectKeyUp(ufd, KEY_RIGHTALT);
-                }
-            }
-            else if(kbe.type == EV_KEY && (kbe.code == KEY_LEFTSHIFT || kbe.code == KEY_RIGHTSHIFT)){
-                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read shift\n");
-                if(!shift_toggle){
-                    injectKeyDown(ufd, KEY_LEFTSHIFT);
-                }
-                else if(shift_toggle){
-                    if(now() - lastKbdTimestamp < lock_time){
-                        shift_lock = 1;
-                        shift_toggle = 0;
+                else if(kbe.type == EV_KEY && kbe.value == 1){
+                    // clear any toggles
+                    for(int i = 0; i < NUM_KEYS; i++){
+                        if(key_toggles[i]){
+                            __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "toggled off %d\n", i);
+                            key_toggles[i] = 0;
+                            injectKeyUp(ufd, KEY_CODES[i]);
+                        }
                     }
                 }
-                else if(shift_lock){
-                    shift_lock = 0;
-                    injectKeyUp(ufd, KEY_LEFTSHIFT);
-                }
-            }
-            else {
-                // clear any toggles
-                if(alt_toggle){
-                    alt_toggle = 0;
-                    injectKeyUp(ufd, KEY_RIGHTALT);
-                }
-                if(shift_toggle){
-                    shift_toggle = 0;
-                    injectKeyUp(ufd, KEY_LEFTSHIFT);
-                }
+                key_index = -1;
             }
         }
     }
@@ -694,7 +742,9 @@ int main() {
 
     LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
+    pthread_t keyboard_meta_monitor_thread;
     pthread_create(&keyboard_monitor_thread, NULL, keyboard_monitor, (void*) &ufd);
+    pthread_create(&keyboard_meta_monitor_thread, NULL, uinput_titan_monitor, (void*) &ufd);
     LOGI("keyboard thread created\n");
 
     while(1) {
