@@ -19,6 +19,11 @@
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+// some good resources
+// standard android kernel event codes: https://android.googlesource.com/kernel/common/+/android-4.14-p/include/uapi/linux/input-event-codes.h
+// event code doc: https://android.googlesource.com/kernel/common/+/android-4.14-p/Documentation/input/event-codes.rst
+// multitouch doc: https://android.googlesource.com/kernel/common/+/android-4.14-p/Documentation/input/multi-touch-protocol.rst
+
 //now() is in total us mod 10^15
 uint64_t now() {
     uint64_t t;
