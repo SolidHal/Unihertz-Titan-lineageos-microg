@@ -24,6 +24,8 @@
 // event code doc: https://android.googlesource.com/kernel/common/+/android-4.14-p/Documentation/input/event-codes.rst
 // multitouch doc: https://android.googlesource.com/kernel/common/+/android-4.14-p/Documentation/input/multi-touch-protocol.rst
 
+// android keylayout file codes: http://www.temblast.com/ref/akeyscode.htm
+
 //now() is in total us mod 10^15
 uint64_t now() {
     uint64_t t;
