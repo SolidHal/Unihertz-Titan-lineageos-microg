@@ -181,6 +181,7 @@ adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
   
 *note:TODO currently the alt+shift layer does not have any functionality so nothing will happen when keys are pressed with both modifiers active
  - 
+TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
 
 
 ##### By default the touchpad is in navigation mode
