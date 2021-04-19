@@ -191,10 +191,13 @@ adb push resources/keyboard/Android10/system_usr_keylayout/* /system/usr/keylayo
  - 
 TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
 - map red key to ctrl using keymapper: TODO: do this with a file, or should this be fn to leave recents intact?
-- TODO: swipes left and right are remapped to arrow keys, or use volume arrow keys?
+- TODO: swipes left and right are remapped to arrow keys, or use volume arrow keys? if use volume arrows, get adb command.
 - TODO: double tap on space mapped to tab
 - recents/app_switch mapped to fn layer: DONE
   - TODO: make graphic that shows mapping
+
+- TODO: set display scaling from adb command
+- TODO: change navigation bar to gesture using adb command
 
 
 
