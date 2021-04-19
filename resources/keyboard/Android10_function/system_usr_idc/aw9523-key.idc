@@ -5,8 +5,8 @@ device.internal = 1
 touch.deviceType = touchScreen
 touch.orientationAware = 1
 
-keyboard.layout = Generic.kl
-keyboard.characterMap = aw9523-key
+keyboard.layout = aw9523key
+keyboard.characterMap = aw9523key.kcm
 keyboard.orientationAware = 1
 keyboard.builtIn = 1
 

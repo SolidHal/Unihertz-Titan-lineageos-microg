@@ -149,10 +149,12 @@ cd resources/uinput-titan
 make
 ```
 
-#### Install
 
+
+#### Install
 ```
 adb root
+adb shell killall uinput-titan
 adb remount
 adb shell mount -o remount,rw /
 adb push resources/keyboard/Android10_function/system_usr_idc/* /system/usr/idc/
@@ -161,39 +163,38 @@ adb push resources/keyboard/Android10_function/system_usr_keylayout/* /system/us
 adb push resources/uinput-titan/uinput-titan /system/bin/uinput-titan
 adb push resources/uinput-titan/titan.rc /system/etc/init/
 adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
+adb reboot
+```
+
+#### Remove
+```
+adb root
+adb remount
+adb shell mount -o remount,rw /
+adb shell rm  /system/bin/uinput-titan
+adb shell rm  /system/etc/init/titan.rc
+adb shell rm  /system/usr/idc/titan-uinput.idc
+adb push resources/keyboard/Android10/system_usr_idc/* /system/usr/idc/
+adb push resources/keyboard/Android10/system_usr_keychars/* /system/usr/keychars/
+adb push resources/keyboard/Android10/system_usr_keylayout/* /system/usr/keylayout/
 ```
 
 #### Functionalities
 
 ##### Added keyboard functionality
-- single pressing alt or shift enters toggle mode
-  - the next pressed key will be modified by alt or shift, and alt/shift will then be disabled
-- quickly double pressing alt or shift enters lock mode
-  - all keys pressed will be modified by alt/shift until alt/shift is pressed again
-  - TODO: double tap on space mapped to tab
-  - TODO: escape key?
   - back mapped to ctrl key
   - recents/app_switch mapped to fn layer
-    - HJKL or IJKL mapped to arrows
-    - T/Y curly brace
     - TODO: make graphic that shows mapping
   
-  
+#### Design / TODO
 *note:TODO currently the alt+shift layer does not have any functionality so nothing will happen when keys are pressed with both modifiers active
  - 
 TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
-
-
-##### By default the touchpad is in navigation mode
-It is meant to act as an extension of the touch screen. 
-It is designed to allow for gestures, scrolling vertically and horizontally, and swipes while preventing taps
-When used with the "Gesture navigation", all navigation gestures can be performed on the touchpad
-This allows for the "recents" and "back" keys to be remapped
-
-##### TODO: pressing the red button on the left side of the device activates terminal mode
-
-- swipes left and right are remapped to arrow keys
-- 
+- map red key to ctrl using keymapper: TODO: do this with a file, or should this be fn to leave recents intact?
+- TODO: swipes left and right are remapped to arrow keys, or use volume arrow keys?
+- TODO: double tap on space mapped to tab
+- recents/app_switch mapped to fn layer: DONE
+  - TODO: make graphic that shows mapping
 
 
 
@@ -267,6 +268,25 @@ adb sideload <android-10-ota.zip>
 ```
 
 
+# kernel research
+
+### keyboard
+Looking into the driver of the titan keyboard, logs seem to call it aw9523_key
+I can find two different references to a driver by this name, both in odd places. 
+the first is a random git gist: https://gist.github.com/tablatronix/318368fd0f66958f413f0ac24a2a50e9 which implies it is from 2017
+the second is from the gemian project: https://github.com/gemian/cosmo-linux-kernel-4.4/tree/master/drivers/misc/mediatek/aw9523 which seems to have originated in 2016. Both seem to be originally authored by AWINIC Technology CO who are the makers of the aw9523 gpio expander. 
+
+Based on the log formatting:
+
+aw9523_key_work: cnt = 30 key_report: p0-row=4, p1-col=2, key_code=158, key_val=1 keymap5 --- 2
+
+
+it seems the titan is running a modified version of the one from the random gist. Unfortunately there isn't any sign of an aw9523 driver in the upstream android driver, or upstream linux.
+
+That said, early this year someone tried to get a basic driver for the chip into upstream linux: https://www.spinics.net/lists/devicetree/msg402971.html
+
+This gives some hope that we could get the keyboard working on a build of the upstream android kernel.
+the fxtec pro1 uses the same chip for its keyboard, and the sailfish os folks use this driver that could also be modified to work https://github.com/sailfish-on-fxtecpro1/kernel-fxtec-pro1/blob/hybris-msm-aosp-9.0/drivers/input/keyboard/aw9523b.c
 
 
 # Thanks to:

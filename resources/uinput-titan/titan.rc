@@ -1,2 +1,2 @@
 on property:vold.decrypt=trigger_restart_framework
-    exec_background u:r:phhsu_daemon:s0 root -- /system/bin/uinput-titan
+    exec_background u:r:magisk:s0 root -- /system/bin/uinput-titan

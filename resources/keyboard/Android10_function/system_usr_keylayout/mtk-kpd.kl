@@ -9,8 +9,7 @@ key 8     7
 key 9     8
 key 10    9
 key 11    0
-# unmap back so we can remap it to ctrl
-# key 158   BACK
+key 158   BACK
 key 230   SOFT_RIGHT
 key 60    SOFT_RIGHT
 key 107   ENDCALL
@@ -80,8 +79,6 @@ key 56    ALT_LEFT
 key 100   ALT_RIGHT
 key 42    SHIFT_LEFT
 key 54    SHIFT_RIGHT
-key 29    CTRL_LEFT
-key 464   FUNCTION
 key 15    TAB
 key 57    SPACE
 key 150   EXPLORER
@@ -101,7 +98,4 @@ key 159   MEDIA_FAST_FORWARD
 # agold add
 key 249   FUNC1
 key 250   FUNC2
-
-# unmap app switcher so we can remap it to function
-# key 580   APP_SWITCH
 
