@@ -1,0 +1,7 @@
+# home isn't actually mapped here and instead is on cf-keys, but mtk-kpd technically can send it
+key 102   HOME
+key 115   VOLUME_UP
+key 114   VOLUME_DOWN
+key 116   POWER
+# this is the red side key
+key 250   FUNCTION

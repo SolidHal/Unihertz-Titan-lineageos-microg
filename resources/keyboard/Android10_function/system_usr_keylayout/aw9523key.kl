@@ -31,5 +31,6 @@ key 57    SPACE
 key 100   ALT_RIGHT
 
 key 158   BACK
-# remap
+# uinput-titan watches for KEY_FN, and remapps 
 key 580   FUNCTION
+key 450   APP_SWITCH

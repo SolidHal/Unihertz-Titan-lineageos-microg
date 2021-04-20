@@ -68,6 +68,9 @@ fastboot flash system <system.img>
 
 ### Install Magisk
 
+TODO: bug was fixed, update instructions. eg how to get boot.img and patch it
+https://github.com/topjohnwu/Magisk/issues/3727
+
 On official Android 10 image, Magisk 22.0 (as of 24 Feb 2021) can't be used to patch boot.img due to bug. Use the following patched boot.img files with Magisk 22.0 pre-installed:
 
 #### These work only for 4/5 Feb 2021 firmware!
@@ -149,12 +152,9 @@ cd resources/uinput-titan
 make
 ```
 
-
-
 #### Install
 ```
 adb root
-adb shell killall uinput-titan
 adb remount
 adb shell mount -o remount,rw /
 adb push resources/keyboard/Android10_function/system_usr_idc/* /system/usr/idc/
@@ -166,7 +166,9 @@ adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
 adb reboot
 ```
 
-#### Remove
+if toggle/lock shift or alt doesn't work do another reboot. There seems to be a bug in the Android InputReader class or the kernel that causes this. Only input devices with `type ALPHA` keychars get this feature, so I'm guessing its some issue with that. 
+
+#### Removal
 ```
 adb root
 adb remount
@@ -177,13 +179,28 @@ adb shell rm  /system/usr/idc/titan-uinput.idc
 adb push resources/keyboard/Android10/system_usr_idc/* /system/usr/idc/
 adb push resources/keyboard/Android10/system_usr_keychars/* /system/usr/keychars/
 adb push resources/keyboard/Android10/system_usr_keylayout/* /system/usr/keylayout/
+adb reboot
 ```
+
+### Further keyboard configuration
+I use Key Mapper from Fdroid to remap the red side key to CTRL. Doing this with keylayout files doesn't work since android doesn't let the two keyboards interact.
+
+### Setting Configuration
+
+This sets the display timeout to 5 minutes, scales down the display, and changes to gesture navigation, and hides the navigation hint
+```
+adb root
+adb shell settings put system screen_off_timeout 600000
+adb shell settings put system display_density_forced 320
+adb shell settings put system system navigation_mode 2
+adb shell settings put system --lineage system navigation_bar_hint 0
+```
+
 
 #### Functionalities
 
 ##### Added keyboard functionality
-  - back mapped to ctrl key
-  - recents/app_switch mapped to fn layer
+  - shift+alt to access programming layer. Unfortunately can't add arrow keys to this layer because they require a `type FULL` keychar file, but shift/alt toggle and lock require a `type ALPHA`
     - TODO: make graphic that shows mapping
   
 #### Design / TODO
@@ -196,8 +213,6 @@ TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
 - recents/app_switch mapped to fn layer: DONE
   - TODO: make graphic that shows mapping
 
-- TODO: set display scaling from adb command
-- TODO: change navigation bar to gesture using adb command
 
 
 

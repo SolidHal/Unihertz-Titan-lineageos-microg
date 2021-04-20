@@ -186,6 +186,9 @@ static int uinput_init() {
     ioctl(fd, UI_SET_KEYBIT, KEY_UP);
     ioctl(fd, UI_SET_KEYBIT, KEY_DOWN);
     ioctl(fd, UI_SET_KEYBIT, KEY_TAB);
+    ioctl(fd, UI_SET_KEYBIT, KEY_RIGHTALT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_LEFTSHIFT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_APPSELECT);
 
     // lets us behave as a touchscreen. Inputs are directly mapped onto display
     ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_DIRECT);
@@ -619,8 +622,14 @@ static void handle(int ufd, struct input_event e){
 }
 
 void *keyboard_monitor(void* ptr) {
-    /* int ufd = *(int*)ptr; */
-    (void)ptr;
+    int ufd = *(int*)ptr;
+    /* (void)ptr; */
+
+    int saw_function = 0;
+    uint64_t last_saw_function = 0;
+    static uint64_t hold_time = (1 % (1000*1000*1000)) * 1000*1000LL;
+
+    uint64_t test_time = 0;
 
     struct input_event kbe;
 
@@ -643,8 +652,42 @@ void *keyboard_monitor(void* ptr) {
                 __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read key code = %d, value = %d\n", kbe.code, kbe.value);
             }
 
+            // can possibly remap more keys, specfically hjkl to arrow keys by mapping them to FUNCTION in the kl
+            // then send  like we did with APP_SWITCH
+
             if(kbe.type == EV_KEY && kbe.value == 1){
                 lastKbdTimestamp = now();
+                if(kbe.code == KEY_APPSELECT){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "read function\n");
+                    saw_function = 1;
+                    last_saw_function = now();
+                }
+            }
+            else if(kbe.type == EV_KEY && kbe.value == 0){
+                test_time = now() - last_saw_function;
+                __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "test_time = %"PRIu64" hold_time = %"PRIu64"\n", test_time, hold_time );
+                if(kbe.code == KEY_APPSELECT && (test_time < hold_time)){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "sending alt and shift\n");
+                    injectKey(fd, KEY_RIGHTALT);
+                    injectKey(fd, KEY_LEFTSHIFT);
+                    saw_function = 0;
+                }
+                // since aw9523 has a limited set of valid keycodes, have to send on ufd instead.
+                // TODO: can we add more valid keycodes to aw9523 key? That would allow us to modify handling of hjkl, etc, as we can map the originals to
+                // FUNCTION in the kl file and then map new, unused key #s to H J K L.
+                // This allows uinput-titan to choose what happens when it sees one of those original keycodes, without android getting in the way,
+                // and then uinput-titan can send the new key # when it actually wants to send H J K L
+                // /proc/bus/input/devices is promising, can we write the KEY bitfield?
+                // /sys/devices/platform/11008000.i2c/i2c-4/4-0058/input/input3 is the sysfs dir for it, this might change though so might have to parse it from /proc/bus               // capabilities/key has the bitmap we want to change
+                // TODO: create another virtual uinput dev with the keycodes of aw9523 plus the unused ones we want to add (450, etc) and copy its capabilites/key to
+                // the aw9523s so we don't have to decode the bitmap
+                // then add the new keycodes (450, etc) to the aw9523 keylayout file
+                // verify that when we copy the capabilites/key over that getevent sees new KEY capabilites
+                else if(kbe.code == KEY_APPSELECT && (test_time >= hold_time)){
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "sending appselect on ufd\n");
+                    injectKey(ufd, KEY_APPSELECT);
+                    saw_function = 0;
+                }
             }
         }
     }

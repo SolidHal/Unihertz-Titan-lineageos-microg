@@ -19,7 +19,7 @@
 touch.deviceType = touchScreen
 touch.orientationAware = 1
 
-keyboard.layout = mtk-kpd
+keyboard.layout = mtkkpd
 keyboard.characterMap = qwerty
 keyboard.orientationAware = 1
 keyboard.builtIn = 0
