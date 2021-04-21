@@ -50,6 +50,73 @@ static void insertEvent(int fd, int type, int code, int value) {
     write(fd, &out_e, sizeof(out_e));
 }
 
+
+static int secondary_uinput_init() {
+    int fd = open("/dev/uinput", O_RDWR);
+
+    struct uinput_setup setup = {
+                                 .id = {
+                                        .bustype = BUS_VIRTUAL,
+                                        .vendor = 0xdead,
+                                        .product = 0xbeef,
+                                        .version = 3,
+                                        },
+                                 .name = "titan-uinput-secondary",
+                                 .ff_effects_max = 0,
+    };
+    ioctl(fd, UI_DEV_SETUP, setup);
+
+    ioctl(fd, UI_SET_EVBIT, EV_SYN);
+    ioctl(fd, UI_SET_EVBIT, EV_KEY);
+
+    // keyboard events
+    ioctl(fd, UI_SET_KEYBIT, KEY_LEFT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_UP);
+    ioctl(fd, UI_SET_KEYBIT, KEY_DOWN);
+    ioctl(fd, UI_SET_KEYBIT, KEY_TAB);
+    ioctl(fd, UI_SET_KEYBIT, 0x000e);
+    ioctl(fd, UI_SET_KEYBIT, 0x0010);
+    ioctl(fd, UI_SET_KEYBIT, 0x0011);
+    ioctl(fd, UI_SET_KEYBIT, 0x0012);
+    ioctl(fd, UI_SET_KEYBIT, 0x0013);
+    ioctl(fd, UI_SET_KEYBIT, 0x0014);
+    ioctl(fd, UI_SET_KEYBIT, 0x0015);
+    ioctl(fd, UI_SET_KEYBIT, 0x0016);
+    ioctl(fd, UI_SET_KEYBIT, 0x0017);
+    ioctl(fd, UI_SET_KEYBIT, 0x0018);
+    ioctl(fd, UI_SET_KEYBIT, 0x0019);
+    ioctl(fd, UI_SET_KEYBIT, 0x001c);
+    ioctl(fd, UI_SET_KEYBIT, 0x001e);
+    ioctl(fd, UI_SET_KEYBIT, 0x001f);
+    ioctl(fd, UI_SET_KEYBIT, 0x0020);
+    ioctl(fd, UI_SET_KEYBIT, 0x0021);
+    ioctl(fd, UI_SET_KEYBIT, 0x0022);
+    ioctl(fd, UI_SET_KEYBIT, 0x0023);
+    ioctl(fd, UI_SET_KEYBIT, 0x0024);
+    ioctl(fd, UI_SET_KEYBIT, 0x0025);
+    ioctl(fd, UI_SET_KEYBIT, 0x0026);
+    ioctl(fd, UI_SET_KEYBIT, 0x002a);
+    ioctl(fd, UI_SET_KEYBIT, 0x002c);
+    ioctl(fd, UI_SET_KEYBIT, 0x002d);
+    ioctl(fd, UI_SET_KEYBIT, 0x002e);
+    ioctl(fd, UI_SET_KEYBIT, 0x002f);
+    ioctl(fd, UI_SET_KEYBIT, 0x0030);
+    ioctl(fd, UI_SET_KEYBIT, 0x0031);
+    ioctl(fd, UI_SET_KEYBIT, 0x0032);
+    ioctl(fd, UI_SET_KEYBIT, 0x0039);
+    ioctl(fd, UI_SET_KEYBIT, 0x0064);
+    ioctl(fd, UI_SET_KEYBIT, 0x009e);
+    ioctl(fd, UI_SET_KEYBIT, 0x0244);
+
+    // lets us behave as a touchscreen. Inputs are directly mapped onto display
+
+    const char phys[] = "this/is/a/virtual/device/for/scrolling";
+    ioctl(fd, UI_SET_PHYS, phys);
+    ioctl(fd, UI_DEV_CREATE, NULL);
+    return fd;
+}
+
 static int uinput_init() {
     int fd = open("/dev/uinput", O_RDWR);
 
@@ -189,6 +256,11 @@ static int uinput_init() {
     ioctl(fd, UI_SET_KEYBIT, KEY_RIGHTALT);
     ioctl(fd, UI_SET_KEYBIT, KEY_LEFTSHIFT);
     ioctl(fd, UI_SET_KEYBIT, KEY_APPSELECT);
+    ioctl(fd, UI_SET_KEYBIT, KEY_NUMERIC_POUND);
+    ioctl(fd, UI_SET_KEYBIT, KEY_H);
+    ioctl(fd, UI_SET_KEYBIT, KEY_J);
+    ioctl(fd, UI_SET_KEYBIT, KEY_K);
+    ioctl(fd, UI_SET_KEYBIT, KEY_L);
 
     // lets us behave as a touchscreen. Inputs are directly mapped onto display
     ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_DIRECT);
@@ -627,9 +699,14 @@ void *keyboard_monitor(void* ptr) {
 
     int saw_function = 0;
     uint64_t last_saw_function = 0;
-    static uint64_t hold_time = (1 % (1000*1000*1000)) * 1000*1000LL;
+    static uint64_t hold_time = 300000;
 
     uint64_t test_time = 0;
+
+    int shift_toggle = 0;
+    int alt_toggle = 0;
+    int shift_lock = 0;
+    int alt_lock = 0;
 
     struct input_event kbe;
 
@@ -641,6 +718,11 @@ void *keyboard_monitor(void* ptr) {
         return NULL;
     }
     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "opened successfully\n");
+
+
+    if ( ioctl(fd, EVIOCSKEYCODE, KEY_LEFT) != 0){
+        __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "ioctl failed\n");
+    }
 
     while(1) {
         if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)){
@@ -655,6 +737,7 @@ void *keyboard_monitor(void* ptr) {
             // can possibly remap more keys, specfically hjkl to arrow keys by mapping them to FUNCTION in the kl
             // then send  like we did with APP_SWITCH
 
+            // for presses, we want to act on key down
             if(kbe.type == EV_KEY && kbe.value == 1){
                 lastKbdTimestamp = now();
                 if(kbe.code == KEY_APPSELECT){
@@ -662,7 +745,157 @@ void *keyboard_monitor(void* ptr) {
                     saw_function = 1;
                     last_saw_function = now();
                 }
+                else if(kbe.code == KEY_LEFTSHIFT){
+                    if (shift_lock){
+                        shift_lock = 0;
+                    }
+                    else if(!shift_toggle){
+                        shift_toggle = 1;
+                    }
+                    else if (shift_toggle){
+                        shift_lock = 1;
+                        shift_toggle = 0;
+                    }
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "shift_toggle = %d, shift_lock = %d\n", shift_toggle, shift_lock);
+                }
+
+                else if(kbe.code == KEY_RIGHTALT){
+                    if (alt_lock){
+                        alt_lock = 0;
+                    }
+                    else if(!alt_toggle){
+                        alt_toggle = 1;
+                    }
+                    else if (alt_toggle){
+                        alt_lock = 1;
+                        alt_toggle = 0;
+                    }
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "alt_toggle = %d, alt_lock = %d\n", alt_toggle, alt_lock);
+                }
+
+                else if(kbe.code == KEY_H){
+                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    injectKeyUp(fd, KEY_H);
+                    if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
+                        injectKey(ufd, KEY_LEFT);
+                        if(shift_toggle && alt_toggle){
+                            shift_toggle = 0;
+                            alt_toggle = 0;
+                        }
+                    }
+                    else if(shift_toggle || shift_lock){
+                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKey(ufd, KEY_H);
+                        if(shift_toggle){
+                            shift_toggle = 0;
+                        }
+                    }
+                    else if(alt_toggle || alt_lock){
+                        injectKey(ufd, KEY_NUMERIC_POUND);
+                        if(alt_toggle){
+                            alt_toggle = 0;
+                        }
+                    }
+                    else{
+                        injectKey(ufd, KEY_H);
+                    }
+
+                }
+                else if(kbe.code == KEY_J){
+                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    injectKeyUp(fd, KEY_J);
+                    if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
+                        injectKey(ufd, KEY_DOWN);
+                        if(shift_toggle && alt_toggle){
+                            shift_toggle = 0;
+                            alt_toggle = 0;
+                        }
+                    }
+                    else if(shift_toggle || shift_lock){
+                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKey(ufd, KEY_J);
+                        if(shift_toggle){
+                            shift_toggle = 0;
+                        }
+                    }
+                    else if(alt_toggle || alt_lock){
+                        injectKey(ufd, KEY_4);
+                        if(alt_toggle){
+                            alt_toggle = 0;
+                        }
+                    }
+                    else{
+                        injectKey(ufd, KEY_J);
+                    }
+
+                }
+                else if(kbe.code == KEY_K){
+                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    injectKeyUp(fd, KEY_K);
+                    if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
+                        injectKey(ufd, KEY_UP);
+                        if(shift_toggle && alt_toggle){
+                            shift_toggle = 0;
+                            alt_toggle = 0;
+                        }
+                    }
+                    else if(shift_toggle || shift_lock){
+                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKey(ufd, KEY_K);
+                        if(shift_toggle){
+                            shift_toggle = 0;
+                        }
+                    }
+                    else if(alt_toggle || alt_lock){
+                        injectKey(ufd, KEY_5);
+                        if(alt_toggle){
+                            alt_toggle = 0;
+                        }
+                    }
+                    else{
+                        injectKey(ufd, KEY_K);
+                    }
+
+                }
+                else if(kbe.code == KEY_L){
+                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    injectKeyUp(fd, KEY_L);
+                    if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
+                        injectKey(ufd, KEY_RIGHT);
+                        if(shift_toggle && alt_toggle){
+                            shift_toggle = 0;
+                            alt_toggle = 0;
+                        }
+                    }
+                    else if(shift_toggle || shift_lock){
+                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKey(ufd, KEY_L);
+                        if(shift_toggle){
+                            shift_toggle = 0;
+                        }
+                    }
+                    else if(alt_toggle || alt_lock){
+                        injectKey(ufd, KEY_6);
+                        if(alt_toggle){
+                            alt_toggle = 0;
+                        }
+                    }
+                    else{
+                        injectKey(ufd, KEY_L);
+                    }
+
+                }
+                else{
+                    if(shift_toggle){
+                        shift_toggle = 0;
+                    }
+                    if(alt_toggle){
+                        alt_toggle = 0;
+                    }
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "shift_toggle = %d, alt_toggle = %d\n", shift_toggle, alt_toggle);
+                }
             }
+            // for holds we want to act on key up
             else if(kbe.type == EV_KEY && kbe.value == 0){
                 test_time = now() - last_saw_function;
                 __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "test_time = %"PRIu64" hold_time = %"PRIu64"\n", test_time, hold_time );
@@ -673,21 +906,14 @@ void *keyboard_monitor(void* ptr) {
                     saw_function = 0;
                 }
                 // since aw9523 has a limited set of valid keycodes, have to send on ufd instead.
-                // TODO: can we add more valid keycodes to aw9523 key? That would allow us to modify handling of hjkl, etc, as we can map the originals to
-                // FUNCTION in the kl file and then map new, unused key #s to H J K L.
-                // This allows uinput-titan to choose what happens when it sees one of those original keycodes, without android getting in the way,
-                // and then uinput-titan can send the new key # when it actually wants to send H J K L
-                // /proc/bus/input/devices is promising, can we write the KEY bitfield?
-                // /sys/devices/platform/11008000.i2c/i2c-4/4-0058/input/input3 is the sysfs dir for it, this might change though so might have to parse it from /proc/bus               // capabilities/key has the bitmap we want to change
-                // TODO: create another virtual uinput dev with the keycodes of aw9523 plus the unused ones we want to add (450, etc) and copy its capabilites/key to
-                // the aw9523s so we don't have to decode the bitmap
-                // then add the new keycodes (450, etc) to the aw9523 keylayout file
-                // verify that when we copy the capabilites/key over that getevent sees new KEY capabilites
+                // try remapping H J K L to FUNCTION, handling them here, emulating how the kcm file behaves
+
                 else if(kbe.code == KEY_APPSELECT && (test_time >= hold_time)){
                     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "sending appselect on ufd\n");
                     injectKey(ufd, KEY_APPSELECT);
                     saw_function = 0;
                 }
+
             }
         }
     }
@@ -699,6 +925,8 @@ void *keyboard_monitor(void* ptr) {
 int main() {
     LOGI("start\n");
     int ufd = uinput_init();
+    int sufd = secondary_uinput_init();
+    (void)sufd;
     int origfd = original_input_init();
 
     LOGI("keyboard thread\n");
