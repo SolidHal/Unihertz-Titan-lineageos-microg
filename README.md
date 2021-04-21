@@ -183,7 +183,7 @@ adb reboot
 ```
 
 ### Further keyboard configuration
-I use Key Mapper from Fdroid to remap the red side key to CTRL. Doing this with keylayout files doesn't work since android doesn't let the two keyboards interact.
+I use Key Mapper from Fdroid to remap the red side key to CTRL. Doing this with keylayout files doesn't work since android doesn't let the two keyboards interact. Remapping this with uinput-titan also doesn't work for a number of reasons.
 
 ### Setting Configuration
 
@@ -200,18 +200,14 @@ adb shell settings put system --lineage system navigation_bar_hint 0
 #### Functionalities
 
 ##### Added keyboard functionality
-  - shift+alt to access programming layer. Unfortunately can't add arrow keys to this layer because they require a `type FULL` keychar file, but shift/alt toggle and lock require a `type ALPHA`
+  - shift+alt to access programming layer.
+  - short pressing the App Switch key also toggles on the programming layer. Long pressing activates the app switcher as usual.
     - TODO: make graphic that shows mapping
   
 #### Design / TODO
-*note:TODO currently the alt+shift layer does not have any functionality so nothing will happen when keys are pressed with both modifiers active
- - 
 TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
-- map red key to ctrl using keymapper: TODO: do this with a file, or should this be fn to leave recents intact?
 - TODO: swipes left and right are remapped to arrow keys, or use volume arrow keys? if use volume arrows, get adb command.
 - TODO: double tap on space mapped to tab
-- recents/app_switch mapped to fn layer: DONE
-  - TODO: make graphic that shows mapping
 
 
 

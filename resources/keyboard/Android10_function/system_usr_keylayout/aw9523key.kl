@@ -1,3 +1,4 @@
+# uinput-titan remaps keys maped to FUNCTION
 key 14    DEL
 key 16    Q
 key 17    W
@@ -31,6 +32,4 @@ key 57    SPACE
 key 100   ALT_RIGHT
 
 key 158   BACK
-# uinput-titan watches for KEY_FN, and remapps 
 key 580   FUNCTION
-key 450   APP_SWITCH
