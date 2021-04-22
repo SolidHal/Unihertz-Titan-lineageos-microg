@@ -91,28 +91,23 @@ eea:
 fastboot flash boot magisk_patched_fixed_boot_Titan_2021020416_g61v71c2k_dfl_eea-ota.img
 ```
 
-## TODO add instructions to build your own patched boot.img
+##### TODO add instructions to build your own patched boot.img
 
 
 ### Install MicroG
-nanolx has nice zips you can flash
-https://downloads.nanolx.org/NanoDroid/Stable/
-download the microG one
-
-or use this magisk module?
+or use this magisk module
 https://github.com/nift4/microg_installer_revived
 TODO: build into rom?
 
 ### Install Fdroid Privileged Extension
-https://downloads.nanolx.org/NanoDroid/Stable/
-- TODO: build into rom?
 - use magisk module?
 https://github.com/Magisk-Modules-Repo/Fdroid-Priv
+- TODO: build into rom?
 
 ### Install Aurora services
 https://gitlab.com/AuroraOSS/AuroraServices
-- TODO: build into rom?
 - use magisk modules
+- TODO: build into rom?
 
 ### Install basic packages
 https://github.com/SolidHal/android_prebuilts_solidhal
@@ -202,14 +197,17 @@ adb shell settings put system --lineage system navigation_bar_hint 0
 ##### Added keyboard functionality
   - shift+alt to access programming layer.
   - short pressing the App Switch key also toggles on the programming layer. Long pressing activates the app switcher as usual.
-    - TODO: make graphic that shows mapping
+
+```
+| ; | | | [ | ] | { | } |   |   |   |     |
+| & | ` | ^ | = | % | ← | ↓ | ↑ | → | del |
+|   | < | > |   |   |   |   |   |   |     |
+```
   
 #### Design / TODO
 TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
 - TODO: swipes left and right are remapped to arrow keys, or use volume arrow keys? if use volume arrows, get adb command.
 - TODO: double tap on space mapped to tab
-
-
 
 
 ### software keyboard 
