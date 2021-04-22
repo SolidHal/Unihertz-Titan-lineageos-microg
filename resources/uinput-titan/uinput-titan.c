@@ -689,6 +689,7 @@ void *keyboard_monitor(void* ptr) {
                         shift_toggle = 0;
                     }
                     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "shift_toggle = %d, shift_lock = %d\n", shift_toggle, shift_lock);
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "alt_toggle = %d, alt_lock = %d\n", alt_toggle, alt_lock);
                 }
 
                 else if(kbe.code == KEY_RIGHTALT){
@@ -703,6 +704,7 @@ void *keyboard_monitor(void* ptr) {
                         alt_toggle = 0;
                     }
                     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "alt_toggle = %d, alt_lock = %d\n", alt_toggle, alt_lock);
+                    __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "shift_toggle = %d, shift_lock = %d\n", shift_toggle, shift_lock);
                 }
 
                 else if(kbe.code == KEY_H){
@@ -716,8 +718,9 @@ void *keyboard_monitor(void* ptr) {
                         }
                     }
                     else if(shift_toggle || shift_lock){
-                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKeyDown(ufd, KEY_LEFTSHIFT);
                         injectKey(ufd, KEY_H);
+                        injectKeyUp(ufd, KEY_LEFTSHIFT);
                         if(shift_toggle){
                             shift_toggle = 0;
                         }
@@ -734,7 +737,7 @@ void *keyboard_monitor(void* ptr) {
 
                 }
                 else if(kbe.code == KEY_J){
-                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    // must tell the main keyboard fd that j was release before it will let us send H on the ufd
                     injectKeyUp(fd, KEY_J);
                     if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
                         injectKey(ufd, KEY_DOWN);
@@ -744,8 +747,9 @@ void *keyboard_monitor(void* ptr) {
                         }
                     }
                     else if(shift_toggle || shift_lock){
-                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKeyDown(ufd, KEY_LEFTSHIFT);
                         injectKey(ufd, KEY_J);
+                        injectKeyUp(ufd, KEY_LEFTSHIFT);
                         if(shift_toggle){
                             shift_toggle = 0;
                         }
@@ -762,7 +766,7 @@ void *keyboard_monitor(void* ptr) {
 
                 }
                 else if(kbe.code == KEY_K){
-                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    // must tell the main keyboard fd that k was release before it will let us send H on the ufd
                     injectKeyUp(fd, KEY_K);
                     if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
                         injectKey(ufd, KEY_UP);
@@ -772,8 +776,9 @@ void *keyboard_monitor(void* ptr) {
                         }
                     }
                     else if(shift_toggle || shift_lock){
-                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKeyDown(ufd, KEY_LEFTSHIFT);
                         injectKey(ufd, KEY_K);
+                        injectKeyUp(ufd, KEY_LEFTSHIFT);
                         if(shift_toggle){
                             shift_toggle = 0;
                         }
@@ -790,7 +795,7 @@ void *keyboard_monitor(void* ptr) {
 
                 }
                 else if(kbe.code == KEY_L){
-                    // must tell the main keyboard fd that h was release before it will let us send H on the ufd
+                    // must tell the main keyboard fd that l was release before it will let us send H on the ufd
                     injectKeyUp(fd, KEY_L);
                     if((shift_toggle || shift_lock) && (alt_toggle || alt_lock)){
                         injectKey(ufd, KEY_RIGHT);
@@ -800,8 +805,9 @@ void *keyboard_monitor(void* ptr) {
                         }
                     }
                     else if(shift_toggle || shift_lock){
-                        // the main keyboard shift takes care of shift for us, so we can simply send the original letter
+                        injectKeyDown(ufd, KEY_LEFTSHIFT);
                         injectKey(ufd, KEY_L);
+                        injectKeyUp(ufd, KEY_LEFTSHIFT);
                         if(shift_toggle){
                             shift_toggle = 0;
                         }
@@ -833,12 +839,18 @@ void *keyboard_monitor(void* ptr) {
                 __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "test_time = %"PRIu64" hold_time = %"PRIu64"\n", test_time, hold_time );
                 if(kbe.code == KEY_APPSELECT && (test_time < hold_time)){
                     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "sending alt and shift\n");
-                    injectKey(fd, KEY_RIGHTALT);
-                    injectKey(fd, KEY_LEFTSHIFT);
+                    if(shift_toggle || shift_lock){
+                        injectKey(fd, KEY_RIGHTALT);
+                    }
+                    if(alt_toggle || alt_lock){
+                        injectKey(fd, KEY_LEFTSHIFT);
+                    }
+                    else{
+                        injectKey(fd, KEY_RIGHTALT);
+                        injectKey(fd, KEY_LEFTSHIFT);
+                    }
                     saw_function = 0;
                 }
-                // since aw9523 has a limited set of valid keycodes, have to send on ufd instead.
-                // try remapping H J K L to FUNCTION, handling them here, emulating how the kcm file behaves
 
                 else if(kbe.code == KEY_APPSELECT && (test_time >= hold_time)){
                     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "sending appselect on ufd\n");
@@ -861,9 +873,7 @@ int main() {
 
     LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
-    /* pthread_t keyboard_meta_monitor_thread; */
     pthread_create(&keyboard_monitor_thread, NULL, keyboard_monitor, (void*) &ufd);
-    /* pthread_create(&keyboard_meta_monitor_thread, NULL, uinput_titan_monitor, (void*) &ufd); */
     LOGI("keyboard thread created\n");
 
     while(1) {
