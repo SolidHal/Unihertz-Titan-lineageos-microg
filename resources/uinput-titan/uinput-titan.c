@@ -195,6 +195,9 @@ static int uinput_init() {
     ioctl(fd, UI_SET_KEYBIT, KEY_J);
     ioctl(fd, UI_SET_KEYBIT, KEY_K);
     ioctl(fd, UI_SET_KEYBIT, KEY_L);
+    ioctl(fd, UI_SET_KEYBIT, KEY_4);
+    ioctl(fd, UI_SET_KEYBIT, KEY_5);
+    ioctl(fd, UI_SET_KEYBIT, KEY_6);
 
     // lets us behave as a touchscreen. Inputs are directly mapped onto display
     ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_DIRECT);
@@ -652,11 +655,6 @@ void *keyboard_monitor(void* ptr) {
         return NULL;
     }
     __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "opened successfully\n");
-
-
-    if ( ioctl(fd, EVIOCSKEYCODE, KEY_LEFT) != 0){
-        __android_log_print(ANDROID_LOG_INFO, "UINPUT-TITAN-KB-MON-THREAD", "ioctl failed\n");
-    }
 
     while(1) {
         if(read(fd, &kbe, sizeof(kbe)) != sizeof(kbe)){

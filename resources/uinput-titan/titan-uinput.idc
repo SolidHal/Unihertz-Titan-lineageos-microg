@@ -1,7 +1,7 @@
 touch.deviceType = touchScreen
 touch.orientationAware = 1
 
-keyboard.layout = querty
+keyboard.layout = Generic
 keyboard.characterMap = qwerty
 
 cursor.mode = navigation

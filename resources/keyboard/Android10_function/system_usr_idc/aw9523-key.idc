@@ -6,7 +6,7 @@ touch.deviceType = touchScreen
 touch.orientationAware = 1
 
 keyboard.layout = aw9523key
-keyboard.characterMap = aw9523key.kcm
+keyboard.characterMap = aw9523-key.kcm
 keyboard.orientationAware = 1
 keyboard.builtIn = 1
 
