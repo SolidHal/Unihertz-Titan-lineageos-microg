@@ -244,8 +244,9 @@ adb shell getevent -v
 1)  Flash the latest Android 9 official build. Android 10 images are only available at ota files so far. 
 - need to use SPFlashTool to flash
   - https://spflashtool.com/
-  - ubuntu linux needs the following pre-requisites:
-  - TODO: old libpng modified to work on newer ubuntu versions. Can be found on this repo
+    - ubuntu linux needs the following pre-requisites:
+      - TODO: old libpng modified to work on newer ubuntu versions. Can be found on this repo
+    - On Arch and Arch-based Linux distributions you'll need to install `libpng12` from the community repository.
   - further setup instructions: https://forum.xda-developers.com/t/tutorial-how-to-setup-sp_flash_tool_linux-mtk-mediatek-soc.3160802/
   
 - get the official image:
