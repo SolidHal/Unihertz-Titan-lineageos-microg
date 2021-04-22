@@ -51,72 +51,6 @@ static void insertEvent(int fd, int type, int code, int value) {
 }
 
 
-static int secondary_uinput_init() {
-    int fd = open("/dev/uinput", O_RDWR);
-
-    struct uinput_setup setup = {
-                                 .id = {
-                                        .bustype = BUS_VIRTUAL,
-                                        .vendor = 0xdead,
-                                        .product = 0xbeef,
-                                        .version = 3,
-                                        },
-                                 .name = "titan-uinput-secondary",
-                                 .ff_effects_max = 0,
-    };
-    ioctl(fd, UI_DEV_SETUP, setup);
-
-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
-
-    // keyboard events
-    ioctl(fd, UI_SET_KEYBIT, KEY_LEFT);
-    ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT);
-    ioctl(fd, UI_SET_KEYBIT, KEY_UP);
-    ioctl(fd, UI_SET_KEYBIT, KEY_DOWN);
-    ioctl(fd, UI_SET_KEYBIT, KEY_TAB);
-    ioctl(fd, UI_SET_KEYBIT, 0x000e);
-    ioctl(fd, UI_SET_KEYBIT, 0x0010);
-    ioctl(fd, UI_SET_KEYBIT, 0x0011);
-    ioctl(fd, UI_SET_KEYBIT, 0x0012);
-    ioctl(fd, UI_SET_KEYBIT, 0x0013);
-    ioctl(fd, UI_SET_KEYBIT, 0x0014);
-    ioctl(fd, UI_SET_KEYBIT, 0x0015);
-    ioctl(fd, UI_SET_KEYBIT, 0x0016);
-    ioctl(fd, UI_SET_KEYBIT, 0x0017);
-    ioctl(fd, UI_SET_KEYBIT, 0x0018);
-    ioctl(fd, UI_SET_KEYBIT, 0x0019);
-    ioctl(fd, UI_SET_KEYBIT, 0x001c);
-    ioctl(fd, UI_SET_KEYBIT, 0x001e);
-    ioctl(fd, UI_SET_KEYBIT, 0x001f);
-    ioctl(fd, UI_SET_KEYBIT, 0x0020);
-    ioctl(fd, UI_SET_KEYBIT, 0x0021);
-    ioctl(fd, UI_SET_KEYBIT, 0x0022);
-    ioctl(fd, UI_SET_KEYBIT, 0x0023);
-    ioctl(fd, UI_SET_KEYBIT, 0x0024);
-    ioctl(fd, UI_SET_KEYBIT, 0x0025);
-    ioctl(fd, UI_SET_KEYBIT, 0x0026);
-    ioctl(fd, UI_SET_KEYBIT, 0x002a);
-    ioctl(fd, UI_SET_KEYBIT, 0x002c);
-    ioctl(fd, UI_SET_KEYBIT, 0x002d);
-    ioctl(fd, UI_SET_KEYBIT, 0x002e);
-    ioctl(fd, UI_SET_KEYBIT, 0x002f);
-    ioctl(fd, UI_SET_KEYBIT, 0x0030);
-    ioctl(fd, UI_SET_KEYBIT, 0x0031);
-    ioctl(fd, UI_SET_KEYBIT, 0x0032);
-    ioctl(fd, UI_SET_KEYBIT, 0x0039);
-    ioctl(fd, UI_SET_KEYBIT, 0x0064);
-    ioctl(fd, UI_SET_KEYBIT, 0x009e);
-    ioctl(fd, UI_SET_KEYBIT, 0x0244);
-
-    // lets us behave as a touchscreen. Inputs are directly mapped onto display
-
-    const char phys[] = "this/is/a/virtual/device/for/scrolling";
-    ioctl(fd, UI_SET_PHYS, phys);
-    ioctl(fd, UI_DEV_CREATE, NULL);
-    return fd;
-}
-
 static int uinput_init() {
     int fd = open("/dev/uinput", O_RDWR);
 
@@ -925,8 +859,6 @@ void *keyboard_monitor(void* ptr) {
 int main() {
     LOGI("start\n");
     int ufd = uinput_init();
-    int sufd = secondary_uinput_init();
-    (void)sufd;
     int origfd = original_input_init();
 
     LOGI("keyboard thread\n");
