@@ -71,10 +71,10 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 1440,
+                    .maximum = 2880,
                     .fuzz = 0,
                     .flat = 0,
-                    .resolution = 1440,
+                    .resolution = 2880,
                     },
     };
     ioctl(fd, UI_ABS_SETUP, abs_setup_x);
@@ -85,10 +85,10 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 720,
+                    .maximum = 1440,
                     .fuzz = 0,
                     .flat = 0,
-                    .resolution = 720,
+                    .resolution = 1440,
                     },
     };
     ioctl(fd, UI_ABS_SETUP, abs_setup_y);
@@ -137,7 +137,7 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 1440,
+                    .maximum = 2880,
                     .fuzz = 0,
                     .flat = 0,
                     .resolution = 0,
@@ -151,7 +151,7 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 720,
+                    .maximum = 1440,
                     .fuzz = 0,
                     .flat = 0,
                     .resolution = 0,
