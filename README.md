@@ -55,7 +55,6 @@ fastboot erase system
 fastboot erase cache
 fastboot erase userdata
 ```
-
 #### Sometimes fastboot fails to detect some of your device's partitions. If you encounter this issue at this or a later step, try rebooting fastboot in "fastbootD" mode:
 ```
 fastboot reboot fastboot
