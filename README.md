@@ -49,11 +49,15 @@ fastboot flashing unlock
 
 press volume up to accept
 
-6) Now wipe the device
+6) Now wipe the device:
 ```
 fastboot erase system
 fastboot erase cache
 fastboot erase userdata
+```
+#### Sometimes fastboot fails to detect some of your device's partitions. If you encounter this issue at this or a later step, try rebooting fastboot in "fastbootD" mode:
+```
+fastboot reboot fastboot
 ```
 
 7) flash the gsi image to the system partition
@@ -62,7 +66,6 @@ fastboot erase userdata
 ```
 fastboot flash system <system.img>
 ```
-
 #### If you don't microG, Magisk, Fdroid Privileged Extension, Aurora Services you can reboot now. Otherwise, Continue to `Install Magisk`
 
 
