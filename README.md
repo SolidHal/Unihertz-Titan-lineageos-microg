@@ -164,7 +164,7 @@ adb push resources/uinput-titan/titan-uinput.idc /system/usr/idc/
 adb reboot
 ```
 
-if toggle/lock shift or alt doesn't work do another reboot. There seems to be a bug in the Android InputReader class or the kernel that causes this. Only input devices with `type ALPHA` keychars get this feature, so I'm guessing its some issue with that. 
+if toggle/lock shift or alt doesn't work do another reboot. There seems to be a bug in the Android InputReader class or the kernel that causes this. Only input devices with `type ALPHA` keychars get this feature, so I'm guessing its some issue with that.
 
 #### Removal
 ```
@@ -191,7 +191,7 @@ adb root
 adb shell settings put system screen_off_timeout 600000
 adb shell settings put system display_density_forced 320
 adb shell settings put system system navigation_mode 2
-adb shell settings put system --lineage system navigation_bar_hint 0
+adb shell settings put system --lineage navigation_bar_hint 0
 ```
 
 
@@ -206,21 +206,21 @@ adb shell settings put system --lineage system navigation_bar_hint 0
 | & | ` | ^ | = | % | ← | ↓ | ↑ | → | del |
 |   | < | > |   |   |   |   |   |   |     |
 ```
-  
+
 #### Design / TODO
 TODO: add functionality: double tap on trackpad to enter cursor scrolling mode
 - TODO: swipes left and right are remapped to arrow keys, or use volume arrow keys? if use volume arrows, get adb command.
 - TODO: double tap on space mapped to tab
 
 
-### software keyboard 
+### software keyboard
 
 ruKeyboard or anysoft
 
 info on https://unihertz-titan.neocities.org
 
 
-### Ui stuttering issues? 
+### Ui stuttering issues?
 
 likely not on this device, but good to note for the future:
 
@@ -244,14 +244,14 @@ adb shell getevent -v
 
 ## Recover bricked titan / restore to stock rom
 
-1)  Flash the latest Android 9 official build. Android 10 images are only available at ota files so far. 
+1)  Flash the latest Android 9 official build. Android 10 images are only available at ota files so far.
 - need to use SPFlashTool to flash
   - https://spflashtool.com/
     - ubuntu linux needs the following pre-requisites:
       - TODO: old libpng modified to work on newer ubuntu versions. Can be found on this repo
     - On Arch and Arch-based Linux distributions you'll need to install `libpng12` from the community repository.
   - further setup instructions: https://forum.xda-developers.com/t/tutorial-how-to-setup-sp_flash_tool_linux-mtk-mediatek-soc.3160802/
-  
+
 - get the official image:
 2020080711_g61v71c2k_dfl_tee.zip
 from here: https://drive.google.com/drive/folders/1fpO65z2_r9zT8UImuV8-5JCRBy33yZcV
@@ -264,13 +264,13 @@ from here: https://drive.google.com/drive/folders/1fpO65z2_r9zT8UImuV8-5JCRBy33y
 - For Scatter-loading File choose the `MT6771_Android_scatter.txt` in your extracted image
 - leave the setting as `Download Only`
 ## WARNING: DO NOT SET AS FORMAT ALL + DOWNLOAD. YOU WILL WIPE YOUR MEID AND IMEI
-- Click Download and wait. 
-- Once it completes you may have to force power cycle the phone. If you get to a menu in Chinese, I found power cycling again to fix it but YMMV. 
+- Click Download and wait.
+- Once it completes you may have to force power cycle the phone. If you get to a menu in Chinese, I found power cycling again to fix it but YMMV.
 
 2) Optional - Flash Official Android 10
 Images can be found here: https://drive.google.com/drive/folders/1YgwDZoVZfNuKmdVuQIfRLA0hrYj0ndgS?fbclid=IwAR0hbuVoITZC7kBUHmN0rWS-kVWLu00e-GOQ4fkose-94BL77TZTtxdveWI
 
-There are a few ways to apply ota updates, but I find using `adb sideload` the easiest. 
+There are a few ways to apply ota updates, but I find using `adb sideload` the easiest.
 
 Make sure you have adb debugging enabled. Plug in your device and run:
 ```
@@ -288,9 +288,9 @@ adb sideload <android-10-ota.zip>
 
 ### keyboard
 Looking into the driver of the titan keyboard, logs seem to call it aw9523_key
-I can find two different references to a driver by this name, both in odd places. 
+I can find two different references to a driver by this name, both in odd places.
 the first is a random git gist: https://gist.github.com/tablatronix/318368fd0f66958f413f0ac24a2a50e9 which implies it is from 2017
-the second is from the gemian project: https://github.com/gemian/cosmo-linux-kernel-4.4/tree/master/drivers/misc/mediatek/aw9523 which seems to have originated in 2016. Both seem to be originally authored by AWINIC Technology CO who are the makers of the aw9523 gpio expander. 
+the second is from the gemian project: https://github.com/gemian/cosmo-linux-kernel-4.4/tree/master/drivers/misc/mediatek/aw9523 which seems to have originated in 2016. Both seem to be originally authored by AWINIC Technology CO who are the makers of the aw9523 gpio expander.
 
 Based on the log formatting:
 
@@ -308,6 +308,6 @@ the fxtec pro1 uses the same chip for its keyboard, and the sailfish os folks us
 # Thanks to:
 @ValdikSS - owner of https://unihertz-titan.neocities.org, patched boot.img for magisk, and twrp builds
           - much of this information comes from them, and I am just organizing it here
-          
+
 @phhusson - for the great base android GSI images
           - for the core of uinput-titan
